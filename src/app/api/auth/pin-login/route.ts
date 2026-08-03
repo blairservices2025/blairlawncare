@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +10,21 @@ const MAX_FAILURES = 5;
  * Sign a crew member in with their email and 4-digit code.
  *
  * There is no session yet when this runs, so the checks happen with the
- * service key. Once the code checks out, a one-time token is generated
- * and redeemed here on the server — the crew member never sees an email,
- * but the session they end up with is an ordinary Supabase session.
+ * service key. Once the code checks out, a one-time token is minted and
+ * handed back for the browser to redeem — the crew member never sees an
+ * email, but the session they end up with is an ordinary Supabase
+ * session.
+ *
+ * The browser finishes the exchange rather than the server: a session
+ * established here would have to be written out as cookies on the way
+ * back, and anything that drops them leaves the caller looking signed out
+ * with no error to show for it. Letting the client redeem the token means
+ * its own Supabase instance stores the session, which is the thing the
+ * rest of the app reads.
+ *
+ * The token is single use and short lived, and it is only issued after
+ * the code has already been checked — it is the same token the emailed
+ * link would carry.
  *
  * Only employees can sign in this way. Four digits is a reasonable lock
  * on someone's own timesheet; it is not a reasonable lock on customer
@@ -93,8 +104,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Mint a one-time token and redeem it here, which sets the session
-  // cookies on the response without an email ever being sent.
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email,
@@ -106,20 +115,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = await createClient();
-  const { error: verifyErr } = await supabase.auth.verifyOtp({
-    type: "email",
-    token_hash: link.properties.hashed_token,
-  });
-  if (verifyErr) {
-    return NextResponse.json({ error: verifyErr.message }, { status: 500 });
-  }
-
   await admin.rpc("record_pin_login_attempt", {
     check_email: email,
     was_ok: true,
   });
   await admin.rpc("clear_pin_login_failures", { check_email: email });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    tokenHash: link.properties.hashed_token,
+  });
 }

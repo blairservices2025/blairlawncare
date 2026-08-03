@@ -38,6 +38,15 @@ function LoginForm() {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) return body.error ?? "That didn't work. Try again.";
+    if (!body.tokenHash) return "Signed in, but no session came back.";
+
+    // Redeem the one-time token here so this browser's Supabase client
+    // holds the session — the rest of the app reads it from there.
+    const { error: sessionErr } = await supabase.auth.verifyOtp({
+      type: "email",
+      token_hash: body.tokenHash,
+    });
+    if (sessionErr) return sessionErr.message;
 
     router.push("/");
     router.refresh();
