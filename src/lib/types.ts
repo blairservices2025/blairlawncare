@@ -146,3 +146,17 @@ export interface JobBoardRow {
   customer_address: string | null;
   assigned_to: string | null;
 }
+
+/** A card charge taken through Square — successful or not. */
+export interface PaymentAttempt {
+  id: string;
+  invoice_id: string | null;
+  customer_id: string | null;
+  charged_by: string | null;
+  amount: number;
+  card_last4: string | null;
+  status: "completed" | "failed";
+  square_payment_id: string | null;
+  error: string | null;
+  created_at: string;
+}

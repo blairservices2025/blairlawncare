@@ -14,7 +14,12 @@ import {
 } from "@/components/ui";
 import ChargeCardModal from "@/components/ChargeCardModal";
 import { daysOverdue, fmtDate, usd } from "@/lib/format";
-import type { Customer, Invoice, ScheduledJob } from "@/lib/types";
+import type {
+  Customer,
+  Invoice,
+  PaymentAttempt,
+  ScheduledJob,
+} from "@/lib/types";
 
 const emptyForm = {
   name: "",
@@ -36,6 +41,7 @@ export default function CustomersPage() {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
+  const [payments, setPayments] = useState<PaymentAttempt[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [form, setForm] = useState<Record<string, string>>(emptyForm);
@@ -58,7 +64,7 @@ export default function CustomersPage() {
 
   async function openDetail(c: Customer) {
     setSelected(c);
-    const [inv, jb] = await Promise.all([
+    const [inv, jb, pay] = await Promise.all([
       supabase
         .from("invoices")
         .select("*")
@@ -70,9 +76,16 @@ export default function CustomersPage() {
         .eq("customer_id", c.id)
         .order("job_date", { ascending: false })
         .limit(15),
+      supabase
+        .from("payment_attempts")
+        .select("*")
+        .eq("customer_id", c.id)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
     setInvoices((inv.data as Invoice[]) ?? []);
     setJobs((jb.data as ScheduledJob[]) ?? []);
+    setPayments((pay.data as PaymentAttempt[]) ?? []);
   }
 
   function startAdd() {
@@ -299,6 +312,42 @@ export default function CustomersPage() {
                           }
                         >
                           {i.status}
+                        </Badge>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold mb-1">Card payments</h4>
+              {payments.length === 0 ? (
+                <p className="text-xs text-ink-soft">
+                  No card charges to this customer yet.
+                </p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {payments.map((p) => (
+                    <li
+                      key={p.id}
+                      className="py-1.5 flex justify-between items-start gap-2 text-sm"
+                    >
+                      <span>
+                        {fmtDate(p.created_at)}
+                        {p.card_last4 ? ` · •••• ${p.card_last4}` : ""}
+                        {p.error && (
+                          <span className="block text-xs text-[var(--status-overdue-fg)]">
+                            {p.error}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        {usd(Number(p.amount))}
+                        <Badge
+                          tone={p.status === "completed" ? "good" : "serious"}
+                        >
+                          {p.status === "completed" ? "paid" : "failed"}
                         </Badge>
                       </span>
                     </li>

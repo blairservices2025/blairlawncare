@@ -26,6 +26,12 @@ Crew · Settings (`.xlsx` export, Square connection)
 timer · my schedule this week · to-dos from the boss · receipt capture
 (camera-friendly) · time-off requests · personal 4-digit code
 
+**Signing in** — an email and a 4-digit code is the everyday way in. A
+password and an emailed sign-in link both still work. Codes are set by the
+boss on the Crew page, so a new crew member never has to be signed in
+already to get their first one. Five wrong codes locks that email for
+fifteen minutes.
+
 **Switching views** — a 4-digit code guards each direction: the boss code
 (2802 by default) to enter the boss view, and each employee's own code to
 open theirs on a shared device. 0000 is the reset path for a forgotten
@@ -50,6 +56,11 @@ row-level security rules.
    | `04-timeoff-times.sql` | start/end times on time-off requests |
    | `05-square.sql` | the columns that link records to Square |
    | `06-job-details.sql` | time and service label on scheduled jobs |
+   | `07-payments.sql` | recording real card charges |
+   | `08-receipt-storage-fix.sql` | lets the boss file a receipt for a crew member, and clears deleted files |
+   | `09-crew-job-board.sql` | the shared yard list the crew tick off |
+   | `10-pin-login.sql` | signing in with an email and a 4-digit code |
+   | `11-pin-hash-privacy.sql` | hides the code hashes from the browser |
 3. Go to **Authentication → Users → Add user** and create **your own account
    first** (email + password, check "auto-confirm").
    ⚠️ The first account ever created automatically becomes the **boss** —
@@ -111,6 +122,14 @@ case-sensitive:
 The Settings page reports which of these are still missing, shows the
 webhook address to paste into Square, and has a **Sync now** button that
 pulls everything across.
+
+Point the Square webhook at the **production** address, not a preview one
+— preview URLs are frozen snapshots and change with every deployment.
+
+With Square connected you can also charge a customer's saved card from
+their profile or from an invoice, and send an invoice raised here to
+Square for the customer to pay. Cards are only ever added on Square's
+side; the app never handles a card number.
 
 The service role key is needed because Square's webhooks arrive with
 nobody signed in, so there is no session for the security rules to check.
