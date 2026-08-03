@@ -30,6 +30,7 @@ export interface Customer {
   card_last4: string | null;
   card_exp: string | null;
   contract_file_url: string | null;
+  square_customer_id?: string | null;
   created_at: string;
 }
 
@@ -44,6 +45,8 @@ export interface Invoice {
   paid_date: string | null;
   recurrence: RecurrenceType;
   created_by: string | null;
+  square_invoice_id?: string | null;
+  square_payment_id?: string | null;
   created_at: string;
   customers?: { name: string } | null;
 }

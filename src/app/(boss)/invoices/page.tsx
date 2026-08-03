@@ -12,6 +12,7 @@ import {
   Modal,
   Select,
 } from "@/components/ui";
+import ChargeCardModal from "@/components/ChargeCardModal";
 import { addDays, fmtDate, todayISO, usd } from "@/lib/format";
 import type { Customer, Invoice } from "@/lib/types";
 
@@ -33,6 +34,7 @@ export default function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [chargingInvoice, setChargingInvoice] = useState<Invoice | null>(null);
 
   const load = useCallback(async () => {
     const [i, c] = await Promise.all([
@@ -99,21 +101,6 @@ export default function InvoicesPage() {
       .update({ status: "unpaid", paid_date: null })
       .eq("id", i.id);
     load();
-  }
-
-  async function chargeCard(i: Invoice) {
-    const cust = customers.find((c) => c.id === i.customer_id);
-    if (!cust?.card_last4) {
-      alert("No card on file for this customer.");
-      return;
-    }
-    if (
-      !confirm(
-        `Record ${usd(Number(i.amount))} as charged to ${cust.card_brand} •••• ${cust.card_last4}?\n\nNote: real card processing is not wired up yet (Phase 3 — QuickBooks Payments). This marks the invoice paid.`
-      )
-    )
-      return;
-    await markPaid(i);
   }
 
   async function remove(i: Invoice) {
@@ -191,10 +178,10 @@ export default function InvoicesPage() {
                     </Badge>
                     {st !== "paid" ? (
                       <>
-                        {cust?.card_last4 && (
+                        {cust?.square_customer_id && (
                           <Button
                             variant="secondary"
-                            onClick={() => chargeCard(i)}
+                            onClick={() => setChargingInvoice(i)}
                             className="!py-1 !px-2 text-xs"
                           >
                             💳 Charge card
@@ -231,6 +218,19 @@ export default function InvoicesPage() {
           </ul>
         )}
       </Card>
+
+      <ChargeCardModal
+        open={!!chargingInvoice}
+        onClose={() => setChargingInvoice(null)}
+        customerId={chargingInvoice?.customer_id ?? null}
+        customerName={chargingInvoice?.customers?.name ?? ""}
+        invoiceId={chargingInvoice?.id}
+        defaultAmount={
+          chargingInvoice ? Number(chargingInvoice.amount) : undefined
+        }
+        description={chargingInvoice?.description}
+        onCharged={load}
+      />
 
       <Modal
         open={showForm}

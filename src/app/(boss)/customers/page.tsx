@@ -12,6 +12,7 @@ import {
   Modal,
   Select,
 } from "@/components/ui";
+import ChargeCardModal from "@/components/ChargeCardModal";
 import { daysOverdue, fmtDate, usd } from "@/lib/format";
 import type { Customer, Invoice, ScheduledJob } from "@/lib/types";
 
@@ -42,6 +43,7 @@ export default function CustomersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [charging, setCharging] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("customers").select("*").order("name");
@@ -268,6 +270,7 @@ export default function CustomersPage() {
                   View contract
                 </Button>
               )}
+              <Button onClick={() => setCharging(true)}>💳 Charge a card</Button>
               <Button variant="danger" onClick={() => removeCustomer(selected)}>
                 Delete
               </Button>
@@ -335,6 +338,15 @@ export default function CustomersPage() {
           </div>
         )}
       </Modal>
+
+      <ChargeCardModal
+        open={charging}
+        onClose={() => setCharging(false)}
+        customerId={selected?.id ?? null}
+        customerName={selected?.name ?? ""}
+        description={`Blair Lawn Care — ${selected?.name ?? ""}`}
+        onCharged={load}
+      />
 
       {/* Add/edit form */}
       <Modal
