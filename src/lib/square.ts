@@ -214,3 +214,83 @@ export function toInvoiceRow(inv: SquareInvoice, customerId: string | null) {
     synced_from_square_at: new Date().toISOString(),
   };
 }
+
+// ---------- cards on file & charging ----------
+
+export interface SquareCard {
+  id: string;
+  card_brand?: string;
+  last_4?: string;
+  exp_month?: number;
+  exp_year?: number;
+  cardholder_name?: string;
+  enabled?: boolean;
+}
+
+/**
+ * The cards this customer has saved in Square.
+ *
+ * The app never sees or stores a card number — Square keeps the card and
+ * hands back an id that can be charged. That is the only lawful way to do
+ * this without becoming subject to card-industry compliance yourself.
+ */
+export async function listCustomerCards(
+  squareCustomerId: string
+): Promise<SquareCard[]> {
+  const qs = new URLSearchParams({
+    customer_id: squareCustomerId,
+    include_disabled: "false",
+  });
+  const body = await squareFetch(`/v2/cards?${qs}`);
+  return ((body.cards ?? []) as SquareCard[]).filter((c) => c.enabled !== false);
+}
+
+export interface ChargeResult {
+  paymentId: string;
+  status: string;
+  amount: number;
+}
+
+/**
+ * Charge a saved card.
+ *
+ * `idempotencyKey` must be unique per intended charge and stable across
+ * retries: if the same key arrives twice, Square returns the original
+ * payment instead of taking the money again. Without it, a double click
+ * or a network retry charges the customer twice.
+ */
+export async function chargeSavedCard(opts: {
+  cardId: string;
+  squareCustomerId: string;
+  amountCents: number;
+  idempotencyKey: string;
+  note?: string;
+}): Promise<ChargeResult> {
+  if (!Number.isInteger(opts.amountCents) || opts.amountCents <= 0) {
+    throw new Error("Charge amount must be a positive whole number of cents");
+  }
+
+  const body = await squareFetch("/v2/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      source_id: opts.cardId,
+      customer_id: opts.squareCustomerId,
+      idempotency_key: opts.idempotencyKey,
+      amount_money: { amount: opts.amountCents, currency: "USD" },
+      autocomplete: true,
+      note: opts.note?.slice(0, 500),
+    }),
+  });
+
+  const payment = body.payment as {
+    id: string;
+    status: string;
+    amount_money?: { amount?: number };
+  };
+
+  return {
+    paymentId: payment.id,
+    status: payment.status,
+    amount: (payment.amount_money?.amount ?? opts.amountCents) / 100,
+  };
+}
