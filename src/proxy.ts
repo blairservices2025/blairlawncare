@@ -40,11 +40,16 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // The magic-link landing route must be reachable without a session —
-  // that request is what creates the session in the first place.
   const path = request.nextUrl.pathname;
   const isLogin = path.startsWith("/login");
-  if (path.startsWith("/auth/")) return response;
+
+  // Never redirect these. The magic-link landing route and the sign-in
+  // endpoint are what *create* a session, so bouncing them to /login
+  // makes signing in impossible — and an API call that gets redirected
+  // returns the login page's HTML, which the caller cannot make sense
+  // of. Routes under /api check their own permissions and answer with
+  // their own errors.
+  if (path.startsWith("/auth/") || path.startsWith("/api/")) return response;
 
   if (!user && !isLogin) {
     const url = request.nextUrl.clone();
