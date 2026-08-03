@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PinPad from "@/components/PinPad";
 import {
   Badge,
   Button,
@@ -53,7 +53,13 @@ function elapsed(fromIso: string) {
 export default function EmployeeClient() {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [me, setMe] = useState<Profile | null>(null);
+  const [viewer, setViewer] = useState<Profile | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [bossGate, setBossGate] = useState(false);
+  const [pinSetup, setPinSetup] = useState(false);
+  const [pinStatus, setPinStatus] = useState<string | null>(null);
   const [openClock, setOpenClock] = useState<TimeClockEntry | null>(null);
   const [openTimer, setOpenTimer] = useState<JobTimerEntry | null>(null);
   const [recentTimers, setRecentTimers] = useState<JobTimerEntry[]>([]);
@@ -76,42 +82,57 @@ export default function EmployeeClient() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return;
+
+    // The boss can open a crew member's view via ?as=<id> (after entering
+    // that person's code). Everyone else only ever sees their own.
+    const { data: signedIn } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    setViewer(signedIn as Profile);
+
+    const asId = searchParams.get("as");
+    const viewId =
+      asId && (signedIn as Profile | null)?.role === "boss" ? asId : user.id;
+    setViewingId(viewId);
+
     const weekStart = mondayOf(todayISO());
     const weekEnd = addDays(weekStart, 6);
     const [p, oc, ot, rt, sh, jb, td, to] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      supabase.from("profiles").select("*").eq("id", viewId).single(),
       supabase
         .from("time_clock_entries")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .is("clock_out", null)
         .order("clock_in", { ascending: false })
         .limit(1),
       supabase
         .from("job_timer_entries")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .is("ended_at", null)
         .order("started_at", { ascending: false })
         .limit(1),
       supabase
         .from("job_timer_entries")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .not("ended_at", "is", null)
         .order("started_at", { ascending: false })
         .limit(5),
       supabase
         .from("crew_shifts")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .gte("shift_date", weekStart)
         .lte("shift_date", weekEnd)
         .order("shift_date"),
       supabase
         .from("scheduled_jobs")
         .select("*, customers(name, address, plan)")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .gte("job_date", weekStart)
         .lte("job_date", weekEnd)
         .order("job_date"),
@@ -123,7 +144,7 @@ export default function EmployeeClient() {
       supabase
         .from("time_off_requests")
         .select("*")
-        .eq("employee_id", user.id)
+        .eq("employee_id", viewId)
         .order("created_at", { ascending: false })
         .limit(5),
     ]);
@@ -225,6 +246,38 @@ export default function EmployeeClient() {
     router.refresh();
   }
 
+  // Switching to the boss view requires the boss code.
+  async function checkBossCode(code: string): Promise<string | null> {
+    const { data: ok, error } = await supabase.rpc("verify_boss_code", { code });
+    if (error) return error.message;
+    if (!ok) return "Wrong code. Try again.";
+    setBossGate(false);
+    router.push("/dashboard");
+    return null;
+  }
+
+  // Choosing a personal code. Typing the reset code (0000) here just
+  // prompts for a new one, which is what makes it a "reset".
+  async function saveNewPin(pin: string): Promise<string | null> {
+    if (pin === "0000") return "Pick a code other than 0000.";
+    const isSelf = viewingId === viewer?.id;
+    const { error } = isSelf
+      ? await supabase.rpc("set_my_pin", { new_pin: pin })
+      : await supabase.rpc("set_employee_pin", {
+          employee: viewingId,
+          new_pin: pin,
+        });
+    if (error) return error.message;
+    setPinSetup(false);
+    setPinStatus("Code saved ✔");
+    return null;
+  }
+
+  // Open the code screen automatically when arriving via "Forgot your code?"
+  useEffect(() => {
+    if (searchParams.get("setpin") === "1") setPinSetup(true);
+  }, [searchParams]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-background p-4">
@@ -235,19 +288,21 @@ export default function EmployeeClient() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="bg-sidebar text-white px-4 py-4 flex items-center justify-between">
-        <div>
+      <header className="bg-sidebar text-white px-4 py-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <div className="font-bold">🌱 Blair Lawn Care</div>
-          <div className="text-xs text-white/60">
+          <div className="text-xs text-white/60 truncate">
             {me?.full_name} · employee view
+            {viewingId !== viewer?.id ? " (opened by the boss)" : ""}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {me?.role === "boss" && (
-            <Link href="/dashboard" className="text-xs text-white/80 underline">
-              Boss view
-            </Link>
-          )}
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => setBossGate(true)}
+            className="text-xs text-white/80 hover:text-white border border-white/25 rounded-lg px-2.5 py-1.5"
+          >
+            🔀 Boss view
+          </button>
           <button onClick={signOut} className="text-xs text-white/60 hover:text-white">
             Sign out
           </button>
@@ -473,7 +528,40 @@ export default function EmployeeClient() {
             </ul>
           )}
         </Card>
+
+        {/* Personal code */}
+        <Card title="My 4-digit code">
+          <p className="text-sm text-muted mb-3">
+            This is the code you type to open your view on a shared phone or
+            tablet. Forgot it? Enter <strong>0000</strong> at the code screen
+            and you&apos;ll be asked to pick a new one.
+          </p>
+          <Button variant="secondary" onClick={() => setPinSetup(true)}>
+            {me?.pin_hash ? "Change my code" : "Set up my code"}
+          </Button>
+          {pinStatus && (
+            <p className="text-sm text-good mt-2">{pinStatus}</p>
+          )}
+        </Card>
       </div>
+
+      {bossGate && (
+        <PinPad
+          title="Boss view"
+          subtitle="Enter the boss code"
+          onComplete={checkBossCode}
+          onCancel={() => setBossGate(false)}
+        />
+      )}
+
+      {pinSetup && (
+        <PinPad
+          title={me?.pin_hash ? "New code" : "Choose your code"}
+          subtitle={`Pick 4 digits for ${me?.full_name ?? "this account"}`}
+          onComplete={saveNewPin}
+          onCancel={() => setPinSetup(false)}
+        />
+      )}
     </main>
   );
 }
