@@ -64,6 +64,8 @@ export interface ScheduledJob {
   customer_id: string;
   employee_id: string | null;
   job_date: string;
+  job_time?: string | null;
+  service?: string | null;
   recurrence: RecurrenceType;
   status: JobStatus;
   note: string | null;
