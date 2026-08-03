@@ -13,6 +13,7 @@ import {
   Select,
   StatTile,
 } from "@/components/ui";
+import BillJobsPanel from "@/components/BillJobsPanel";
 import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
 import type { Profile, ScheduledJob } from "@/lib/types";
 
@@ -138,6 +139,8 @@ export default function JobsPage() {
           accent={3}
         />
       </div>
+
+      <BillJobsPanel />
 
       <Card
         title={`Week of ${fmtDate(weekStart)}`}

@@ -323,6 +323,12 @@ export async function createSquareInvoice(opts: {
   dueDate: string;
   idempotencyKey: string;
   publish: boolean;
+  /**
+   * When given, Square charges this saved card the moment the invoice is
+   * published and emails the customer the invoice and receipt together —
+   * one step, rather than billing and notifying separately.
+   */
+  cardId?: string;
 }): Promise<{ invoiceId: string; status: string; publicUrl?: string }> {
   if (!Number.isInteger(opts.amountCents) || opts.amountCents <= 0) {
     throw new Error("Invoice amount must be a positive whole number of cents");
@@ -365,7 +371,8 @@ export async function createSquareInvoice(opts: {
           {
             request_type: "BALANCE",
             due_date: opts.dueDate,
-            automatic_payment_source: "NONE",
+            automatic_payment_source: opts.cardId ? "CARD_ON_FILE" : "NONE",
+            ...(opts.cardId ? { card_id: opts.cardId } : {}),
           },
         ],
       },
@@ -397,4 +404,44 @@ export async function createSquareInvoice(opts: {
     status: pub.status,
     publicUrl: pub.public_url,
   };
+}
+
+/**
+ * Save a card against a Square customer.
+ *
+ * `sourceId` is a single-use token produced in the browser by Square's
+ * Web Payments SDK — the card number goes straight from the customer's
+ * browser to Square and never passes through this app or its database.
+ *
+ * Square requires the customer to have agreed to the card being kept and
+ * charged later. That consent is collected in the form that produces the
+ * token; storing a card without it can get the account shut down.
+ */
+export async function saveCardOnFile(opts: {
+  sourceId: string;
+  squareCustomerId: string;
+  idempotencyKey: string;
+  cardholderName?: string;
+}): Promise<SquareCard> {
+  const body = await squareFetch("/v2/cards", {
+    method: "POST",
+    body: JSON.stringify({
+      idempotency_key: opts.idempotencyKey,
+      source_id: opts.sourceId,
+      card: {
+        customer_id: opts.squareCustomerId,
+        ...(opts.cardholderName ? { cardholder_name: opts.cardholderName } : {}),
+      },
+    }),
+  });
+  return body.card as SquareCard;
+}
+
+/** Card-on-file charges sit on Square's card-not-present rate. */
+export const CARD_ON_FILE_RATE = { percent: 3.5, fixedCents: 15 };
+
+export function estimateSquareFee(amountCents: number) {
+  return Math.round(
+    (amountCents * CARD_ON_FILE_RATE.percent) / 100 + CARD_ON_FILE_RATE.fixedCents
+  );
 }

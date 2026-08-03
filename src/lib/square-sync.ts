@@ -117,6 +117,25 @@ export async function upsertInvoice(db: Admin, si: SquareInvoice) {
     const { error } = await db.from("invoices").insert(row);
     if (error) throw new Error(`Adding invoice: ${error.message}`);
   }
+
+  // A job billed from here carries this invoice's id. Square telling us
+  // the money moved is what marks the work paid, rather than assuming it
+  // worked at the moment we asked.
+  await syncJobPayment(db, si);
+}
+
+/** Reflect an invoice's outcome onto the job it was raised for. */
+async function syncJobPayment(db: Admin, si: SquareInvoice) {
+  const status = (si.status ?? "").toUpperCase();
+
+  const paid = ["PAID", "REFUNDED", "PARTIALLY_REFUNDED"].includes(status);
+  const failed = ["FAILED", "CANCELED"].includes(status);
+  if (!paid && !failed) return;
+
+  await db
+    .from("scheduled_jobs")
+    .update({ payment_status: paid ? "paid" : "failed" })
+    .eq("square_invoice_id", si.id);
 }
 
 export interface SyncResult {

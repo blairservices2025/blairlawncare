@@ -69,6 +69,10 @@ export interface ScheduledJob {
   job_date: string;
   job_time?: string | null;
   service?: string | null;
+  price?: number | null;
+  square_invoice_id?: string | null;
+  billed_at?: string | null;
+  payment_status?: "pending" | "paid" | "failed" | null;
   recurrence: RecurrenceType;
   status: JobStatus;
   note: string | null;
