@@ -69,6 +69,7 @@ export default function EmployeeClient() {
   const [shifts, setShifts] = useState<CrewShift[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [todayJobs, setTodayJobs] = useState<JobBoardRow[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [jobName, setJobName] = useState("");
@@ -275,6 +276,25 @@ export default function EmployeeClient() {
       allDay: true,
     });
     load();
+  }
+
+  /** Copy an address so it can be pasted into whichever maps app they use. */
+  async function copyAddress(jobId: string, address: string) {
+    try {
+      await navigator.clipboard.writeText(address);
+    } catch {
+      // Older browsers, or a page without clipboard permission.
+      const el = document.createElement("textarea");
+      el.value = address;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopiedId(jobId);
+    setTimeout(() => setCopiedId((id) => (id === jobId ? null : id)), 2000);
   }
 
   /** Tick a yard off — or put it back if it was ticked by mistake. */
@@ -484,14 +504,15 @@ export default function EmployeeClient() {
                         {j.assigned_to ? ` · ${j.assigned_to}` : " · anyone"}
                       </div>
                       {j.customer_address && (
-                        <a
-                          href={`https://maps.google.com/?q=${encodeURIComponent(j.customer_address)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-cut underline"
+                        <button
+                          onClick={() => copyAddress(j.id, j.customer_address!)}
+                          className="text-xs text-cut underline text-left"
+                          title="Tap to copy"
                         >
-                          {j.customer_address}
-                        </a>
+                          {copiedId === j.id
+                            ? "Address copied ✓"
+                            : j.customer_address}
+                        </button>
                       )}
                     </div>
                     {done && <Badge tone="good">done</Badge>}
