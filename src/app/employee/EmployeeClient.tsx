@@ -571,6 +571,43 @@ export default function EmployeeClient() {
 
         <ReceiptCapture uploaderId={viewingId} title="Capture a receipt" />
 
+        {/* Job timer */}
+        <Card title="Job timer">
+          {openTimer ? (
+            <div className="text-center">
+              <div className="text-sm font-medium">{openTimer.job_name}</div>
+              <div className="text-3xl font-bold tabular-nums my-2">
+                {elapsed(openTimer.started_at)}
+              </div>
+              <Button variant="danger" onClick={stopTimer} className="w-full">
+                Stop timer
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Job name (e.g. Smith front yard)"
+                value={jobName}
+                onChange={(e) => setJobName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && startTimer()}
+              />
+              <Button onClick={startTimer}>Start</Button>
+            </div>
+          )}
+          {recentTimers.length > 0 && (
+            <ul className="mt-3 divide-y divide-line">
+              {recentTimers.map((t) => (
+                <li key={t.id} className="py-1.5 flex justify-between text-sm">
+                  <span>{t.job_name}</span>
+                  <span className="text-ink-soft tabular-nums">
+                    {fmtDuration(hoursBetween(t.started_at, t.ended_at))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         {/* Time off */}
         <Card title="Request time off">
           <div className="space-y-3">
@@ -685,43 +722,6 @@ export default function EmployeeClient() {
             <p className="text-sm text-cut mt-2">{pinStatus}</p>
           )}
         </Card>
-        {/* Job timer */}
-        <Card title="Job timer">
-          {openTimer ? (
-            <div className="text-center">
-              <div className="text-sm font-medium">{openTimer.job_name}</div>
-              <div className="text-3xl font-bold tabular-nums my-2">
-                {elapsed(openTimer.started_at)}
-              </div>
-              <Button variant="danger" onClick={stopTimer} className="w-full">
-                Stop timer
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Job name (e.g. Smith front yard)"
-                value={jobName}
-                onChange={(e) => setJobName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && startTimer()}
-              />
-              <Button onClick={startTimer}>Start</Button>
-            </div>
-          )}
-          {recentTimers.length > 0 && (
-            <ul className="mt-3 divide-y divide-line">
-              {recentTimers.map((t) => (
-                <li key={t.id} className="py-1.5 flex justify-between text-sm">
-                  <span>{t.job_name}</span>
-                  <span className="text-ink-soft tabular-nums">
-                    {fmtDuration(hoursBetween(t.started_at, t.ended_at))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
       </div>
 
       {bossGate && (
