@@ -386,12 +386,27 @@ values ('contracts', 'contracts', false)
 on conflict (id) do nothing;
 
 -- receipts bucket: any signed-in user can upload to their own folder; boss reads all
+-- Crew write into their own folder; the boss can reach any of them,
+-- which is what lets the boss file a receipt while viewing a crew
+-- member's page.
 drop policy if exists "receipts upload own folder" on storage.objects;
 create policy "receipts upload own folder" on storage.objects for insert to authenticated
-  with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'receipts'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()));
 drop policy if exists "receipts read own or boss" on storage.objects;
 create policy "receipts read own or boss" on storage.objects for select to authenticated
-  using (bucket_id = 'receipts' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()));
+  using (bucket_id = 'receipts'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()));
+drop policy if exists "receipts delete own or boss" on storage.objects;
+create policy "receipts delete own or boss" on storage.objects for delete to authenticated
+  using (bucket_id = 'receipts'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()));
+drop policy if exists "receipts update own or boss" on storage.objects;
+create policy "receipts update own or boss" on storage.objects for update to authenticated
+  using (bucket_id = 'receipts'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()))
+  with check (bucket_id = 'receipts'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_boss()));
 
 -- contracts bucket: boss only
 drop policy if exists "contracts boss all" on storage.objects;

@@ -55,7 +55,17 @@ export default function ReceiptCapture({
       .from("receipts")
       .upload(path, file);
     if (upErr) {
-      setStatus(`Upload failed: ${upErr.message}`);
+      // The storage rules reject an upload into a folder that isn't
+      // yours unless you're the boss — say so instead of showing the
+      // raw database wording.
+      const permissionIssue = /row-level security|violates|not authorized/i.test(
+        upErr.message
+      );
+      setStatus(
+        permissionIssue
+          ? "Upload blocked by the database rules. Run supabase/08-receipt-storage-fix.sql in the Supabase SQL Editor, then try again."
+          : `Upload failed: ${upErr.message}`
+      );
       setBusy(false);
       return;
     }
