@@ -35,6 +35,7 @@ export default function InvoicesPage() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [chargingInvoice, setChargingInvoice] = useState<Invoice | null>(null);
+  const [pushing, setPushing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [i, c] = await Promise.all([
@@ -103,6 +104,45 @@ export default function InvoicesPage() {
     load();
   }
 
+  async function pushToSquare(i: Invoice, publish: boolean) {
+    const cust = customers.find((c) => c.id === i.customer_id);
+    if (!cust?.square_customer_id) {
+      alert(
+        "That customer isn't linked to Square yet. Add them in Square, then sync from Settings."
+      );
+      return;
+    }
+    if (
+      !confirm(
+        publish
+          ? `Send this invoice to ${cust.name} through Square? They'll get an email from Square asking to pay ${usd(Number(i.amount))}.`
+          : `Create this invoice in Square as a draft for ${cust.name}? Nothing is sent to them yet.`
+      )
+    )
+      return;
+
+    setPushing(i.id);
+    const res = await fetch("/api/square/push-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        invoiceId: i.id,
+        publish,
+        idempotencyKey: crypto.randomUUID(),
+      }),
+    });
+    const body = await res.json();
+    setPushing(null);
+    if (!res.ok) {
+      alert(`Could not send to Square: ${body.error}`);
+      return;
+    }
+    load();
+    if (body.publicUrl && confirm("Sent. Open it in Square?")) {
+      window.open(body.publicUrl, "_blank");
+    }
+  }
+
   async function remove(i: Invoice) {
     if (!confirm("Delete this invoice?")) return;
     await supabase.from("invoices").delete().eq("id", i.id);
@@ -159,6 +199,7 @@ export default function InvoicesPage() {
                         ? ` · repeats ${i.recurrence.replace("_", "-")}`
                         : ""}
                       {i.paid_date ? ` · paid ${fmtDate(i.paid_date)}` : ""}
+                      {i.square_invoice_id ? " · in Square" : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -194,6 +235,16 @@ export default function InvoicesPage() {
                         >
                           Mark paid
                         </Button>
+                        {cust?.square_customer_id && !i.square_invoice_id && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => pushToSquare(i, true)}
+                            disabled={pushing === i.id}
+                            className="!py-1 !px-2 text-xs"
+                          >
+                            {pushing === i.id ? "Sending…" : "⬆ Send via Square"}
+                          </Button>
+                        )}
                       </>
                     ) : (
                       <Button

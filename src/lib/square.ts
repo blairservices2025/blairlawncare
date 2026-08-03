@@ -294,3 +294,107 @@ export async function chargeSavedCard(opts: {
     amount: (payment.amount_money?.amount ?? opts.amountCents) / 100,
   };
 }
+
+// ---------- sending an invoice to Square ----------
+
+/** The first location on the account — invoices must belong to one. */
+export async function firstLocationId(): Promise<string> {
+  const body = await squareFetch("/v2/locations");
+  const locations = (body.locations ?? []) as { id: string; status?: string }[];
+  const active = locations.find((l) => l.status !== "INACTIVE") ?? locations[0];
+  if (!active) throw new Error("No Square location found on this account");
+  return active.id;
+}
+
+/**
+ * Create a Square invoice from one of ours.
+ *
+ * Square needs an order first — the order holds the line items and the
+ * money, the invoice is the thing that gets delivered to the customer.
+ *
+ * `publish` decides whether Square actually sends it. Left off, it lands
+ * in Square as a draft for review, which is the safer default for the
+ * first few.
+ */
+export async function createSquareInvoice(opts: {
+  squareCustomerId: string;
+  description: string;
+  amountCents: number;
+  dueDate: string;
+  idempotencyKey: string;
+  publish: boolean;
+}): Promise<{ invoiceId: string; status: string; publicUrl?: string }> {
+  if (!Number.isInteger(opts.amountCents) || opts.amountCents <= 0) {
+    throw new Error("Invoice amount must be a positive whole number of cents");
+  }
+
+  const locationId = await firstLocationId();
+
+  const orderBody = await squareFetch("/v2/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      idempotency_key: `${opts.idempotencyKey}-order`,
+      order: {
+        location_id: locationId,
+        customer_id: opts.squareCustomerId,
+        line_items: [
+          {
+            name: opts.description.slice(0, 500),
+            quantity: "1",
+            base_price_money: { amount: opts.amountCents, currency: "USD" },
+          },
+        ],
+      },
+    }),
+  });
+
+  const orderId = (orderBody.order as { id: string }).id;
+
+  const invoiceBody = await squareFetch("/v2/invoices", {
+    method: "POST",
+    body: JSON.stringify({
+      idempotency_key: `${opts.idempotencyKey}-invoice`,
+      invoice: {
+        location_id: locationId,
+        order_id: orderId,
+        primary_recipient: { customer_id: opts.squareCustomerId },
+        title: opts.description.slice(0, 250),
+        delivery_method: "EMAIL",
+        accepted_payment_methods: { card: true, bank_account: false },
+        payment_requests: [
+          {
+            request_type: "BALANCE",
+            due_date: opts.dueDate,
+            automatic_payment_source: "NONE",
+          },
+        ],
+      },
+    }),
+  });
+
+  const invoice = invoiceBody.invoice as {
+    id: string;
+    version: number;
+    status: string;
+    public_url?: string;
+  };
+
+  if (!opts.publish) {
+    return { invoiceId: invoice.id, status: invoice.status };
+  }
+
+  const published = await squareFetch(`/v2/invoices/${invoice.id}/publish`, {
+    method: "POST",
+    body: JSON.stringify({
+      idempotency_key: `${opts.idempotencyKey}-publish`,
+      version: invoice.version,
+    }),
+  });
+
+  const pub = published.invoice as { id: string; status: string; public_url?: string };
+  return {
+    invoiceId: pub.id,
+    status: pub.status,
+    publicUrl: pub.public_url,
+  };
+}
