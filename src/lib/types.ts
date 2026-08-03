@@ -130,3 +130,19 @@ export interface Receipt {
   created_at: string;
   profiles?: { full_name: string } | null;
 }
+
+/** A job as the crew sees it — customer name/address without the rest. */
+export interface JobBoardRow {
+  id: string;
+  customer_id: string;
+  employee_id: string | null;
+  job_date: string;
+  job_time: string | null;
+  service: string | null;
+  status: JobStatus;
+  note: string | null;
+  recurrence: RecurrenceType;
+  customer_name: string | null;
+  customer_address: string | null;
+  assigned_to: string | null;
+}

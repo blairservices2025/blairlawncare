@@ -27,6 +27,7 @@ import {
 } from "@/lib/format";
 import type {
   CrewShift,
+  JobBoardRow,
   JobTimerEntry,
   Profile,
   ScheduledJob,
@@ -67,6 +68,7 @@ export default function EmployeeClient() {
   const [recentTimers, setRecentTimers] = useState<JobTimerEntry[]>([]);
   const [shifts, setShifts] = useState<CrewShift[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
+  const [todayJobs, setTodayJobs] = useState<JobBoardRow[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [jobName, setJobName] = useState("");
@@ -103,7 +105,7 @@ export default function EmployeeClient() {
 
     const weekStart = mondayOf(todayISO());
     const weekEnd = addDays(weekStart, 6);
-    const [p, oc, ot, rt, sh, jb, td, to] = await Promise.all([
+    const [p, oc, ot, rt, sh, jb, td, to, yl] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", viewId).single(),
       supabase
         .from("time_clock_entries")
@@ -151,6 +153,12 @@ export default function EmployeeClient() {
         .eq("employee_id", viewId)
         .order("created_at", { ascending: false })
         .limit(5),
+      // The whole crew's route for today, names and addresses included.
+      supabase
+        .from("job_board")
+        .select("*")
+        .eq("job_date", todayISO())
+        .order("job_time", { nullsFirst: false }),
     ]);
     setMe(p.data as Profile);
     setOpenClock((oc.data?.[0] as TimeClockEntry) ?? null);
@@ -160,12 +168,30 @@ export default function EmployeeClient() {
     setJobs((jb.data as ScheduledJob[]) ?? []);
     setTodos((td.data as Todo[]) ?? []);
     setTimeOff((to.data as TimeOffRequest[]) ?? []);
+    setTodayJobs((yl.data as JobBoardRow[]) ?? []);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // A yard ticked off on someone else's phone shows up here without
+  // anyone refreshing.
+  useEffect(() => {
+    const channel = supabase
+      .channel("crew-job-board")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scheduled_jobs" },
+        () => load()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   async function clockIn() {
@@ -251,6 +277,29 @@ export default function EmployeeClient() {
     load();
   }
 
+  /** Tick a yard off — or put it back if it was ticked by mistake. */
+  async function toggleJobDone(j: JobBoardRow) {
+    const next = j.status === "done" ? "scheduled" : "done";
+
+    // Show it immediately; the live subscription confirms it.
+    setTodayJobs((list) =>
+      list.map((x) => (x.id === j.id ? { ...x, status: next } : x))
+    );
+
+    const { error } = await supabase
+      .from("scheduled_jobs")
+      .update({ status: next })
+      .eq("id", j.id);
+
+    if (error) {
+      // Put it back the way it was rather than showing a false tick.
+      setTodayJobs((list) =>
+        list.map((x) => (x.id === j.id ? { ...x, status: j.status } : x))
+      );
+      alert(`Could not update that job: ${error.message}`);
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -288,6 +337,8 @@ export default function EmployeeClient() {
   useEffect(() => {
     if (searchParams.get("setpin") === "1") setPinSetup(true);
   }, [searchParams]);
+
+  const doneToday = todayJobs.filter((j) => j.status === "done").length;
 
   if (loading) {
     return (
@@ -349,43 +400,6 @@ export default function EmployeeClient() {
           </div>
         </Card>
 
-        {/* Job timer */}
-        <Card title="Job timer">
-          {openTimer ? (
-            <div className="text-center">
-              <div className="text-sm font-medium">{openTimer.job_name}</div>
-              <div className="text-3xl font-bold tabular-nums my-2">
-                {elapsed(openTimer.started_at)}
-              </div>
-              <Button variant="danger" onClick={stopTimer} className="w-full">
-                Stop timer
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                placeholder="Job name (e.g. Smith front yard)"
-                value={jobName}
-                onChange={(e) => setJobName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && startTimer()}
-              />
-              <Button onClick={startTimer}>Start</Button>
-            </div>
-          )}
-          {recentTimers.length > 0 && (
-            <ul className="mt-3 divide-y divide-line">
-              {recentTimers.map((t) => (
-                <li key={t.id} className="py-1.5 flex justify-between text-sm">
-                  <span>{t.job_name}</span>
-                  <span className="text-ink-soft tabular-nums">
-                    {fmtDuration(hoursBetween(t.started_at, t.ended_at))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
         {/* My schedule */}
         <Card title="My schedule this week">
           {shifts.length === 0 && jobs.length === 0 ? (
@@ -422,6 +436,68 @@ export default function EmployeeClient() {
                   </Badge>
                 </li>
               ))}
+            </ul>
+          )}
+        </Card>
+
+        {/* Yard list — shared with the whole crew */}
+        <Card
+          title="Yard list"
+          action={
+            <span className="text-xs text-ink-soft">
+              {doneToday}/{todayJobs.length} done
+            </span>
+          }
+        >
+          <p className="text-[12px] text-ink-soft mb-3">
+            Everything on today&apos;s route. Tick one off and it updates for
+            the whole crew.
+          </p>
+          {todayJobs.length === 0 ? (
+            <Empty>No yards scheduled for today.</Empty>
+          ) : (
+            <ul className="divide-y divide-line">
+              {todayJobs.map((j) => {
+                const done = j.status === "done";
+                return (
+                  <li key={j.id} className="py-2.5 flex items-start gap-3">
+                    <button
+                      onClick={() => toggleJobDone(j)}
+                      aria-label={done ? "Mark not done" : "Mark done"}
+                      className={`mt-0.5 w-7 h-7 shrink-0 rounded-full border-2 flex items-center justify-center text-sm transition-colors ${
+                        done
+                          ? "bg-cut border-cut text-[var(--white)]"
+                          : "border-line text-transparent hover:border-cut"
+                      }`}
+                    >
+                      ✓
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`text-[13.5px] font-semibold ${done ? "line-through text-ink-soft" : ""}`}
+                      >
+                        {j.customer_name ?? "Unknown"}
+                      </div>
+                      <div className="text-xs text-ink-soft">
+                        {j.job_time ? `${fmtClock(j.job_time)} · ` : ""}
+                        {j.service ?? "Mow"}
+                        {j.assigned_to ? ` · ${j.assigned_to}` : " · anyone"}
+                      </div>
+                      {j.customer_address && (
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(j.customer_address)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-cut underline"
+                        >
+                          {j.customer_address}
+                        </a>
+                      )}
+                    </div>
+                    {done && <Badge tone="good">done</Badge>}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
@@ -571,6 +647,43 @@ export default function EmployeeClient() {
             <p className="text-sm text-cut mt-2">{pinStatus}</p>
           )}
         </Card>
+        {/* Job timer */}
+        <Card title="Job timer">
+          {openTimer ? (
+            <div className="text-center">
+              <div className="text-sm font-medium">{openTimer.job_name}</div>
+              <div className="text-3xl font-bold tabular-nums my-2">
+                {elapsed(openTimer.started_at)}
+              </div>
+              <Button variant="danger" onClick={stopTimer} className="w-full">
+                Stop timer
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Job name (e.g. Smith front yard)"
+                value={jobName}
+                onChange={(e) => setJobName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && startTimer()}
+              />
+              <Button onClick={startTimer}>Start</Button>
+            </div>
+          )}
+          {recentTimers.length > 0 && (
+            <ul className="mt-3 divide-y divide-line">
+              {recentTimers.map((t) => (
+                <li key={t.id} className="py-1.5 flex justify-between text-sm">
+                  <span>{t.job_name}</span>
+                  <span className="text-ink-soft tabular-nums">
+                    {fmtDuration(hoursBetween(t.started_at, t.ended_at))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
       </div>
 
       {bossGate && (
