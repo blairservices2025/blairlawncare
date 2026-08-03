@@ -26,10 +26,11 @@ const MAX_FAILURES = 5;
  * the code has already been checked — it is the same token the emailed
  * link would carry.
  *
- * Only employees can sign in this way. Four digits is a reasonable lock
- * on someone's own timesheet; it is not a reasonable lock on customer
- * records, invoices and card charging, so the boss account still needs a
- * password or a magic link.
+ * Anyone with a code can sign in this way, the boss included. That is a
+ * deliberate choice by the owner: it puts the admin side behind four
+ * digits too, so the guess limit below is the thing carrying the weight.
+ * The password and emailed-link routes still work for anyone who wants a
+ * stronger lock on their own account.
  */
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
@@ -87,20 +88,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "That email and code don't match." },
       { status: 401 }
-    );
-  }
-
-  if (result.role !== "employee") {
-    await admin.rpc("record_pin_login_attempt", {
-      check_email: email,
-      was_ok: false,
-    });
-    return NextResponse.json(
-      {
-        error:
-          "Admin accounts sign in with a password or an email link, not a 4-digit code.",
-      },
-      { status: 403 }
     );
   }
 

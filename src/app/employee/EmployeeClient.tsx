@@ -63,6 +63,7 @@ export default function EmployeeClient() {
   const [bossGate, setBossGate] = useState(false);
   const [pinSetup, setPinSetup] = useState(false);
   const [pinStatus, setPinStatus] = useState<string | null>(null);
+  const [hasPin, setHasPin] = useState(false);
   const [openClock, setOpenClock] = useState<TimeClockEntry | null>(null);
   const [openTimer, setOpenTimer] = useState<JobTimerEntry | null>(null);
   const [recentTimers, setRecentTimers] = useState<JobTimerEntry[]>([]);
@@ -170,6 +171,14 @@ export default function EmployeeClient() {
     setTodos((td.data as Todo[]) ?? []);
     setTimeOff((to.data as TimeOffRequest[]) ?? []);
     setTodayJobs((yl.data as JobBoardRow[]) ?? []);
+
+    // Whether a code is set — asked for rather than read off the profile,
+    // since the hash itself is not exposed to the browser.
+    const { data: pinSet } = await supabase.rpc("employee_has_pin", {
+      employee: viewId,
+    });
+    setHasPin(Boolean(pinSet));
+
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -670,7 +679,7 @@ export default function EmployeeClient() {
             and you&apos;ll be asked to pick a new one.
           </p>
           <Button variant="secondary" onClick={() => setPinSetup(true)}>
-            {me?.pin_hash ? "Change my code" : "Set up my code"}
+            {hasPin ? "Change my code" : "Set up my code"}
           </Button>
           {pinStatus && (
             <p className="text-sm text-cut mt-2">{pinStatus}</p>
@@ -726,7 +735,7 @@ export default function EmployeeClient() {
 
       {pinSetup && (
         <PinPad
-          title={me?.pin_hash ? "New code" : "Choose your code"}
+          title={hasPin ? "New code" : "Choose your code"}
           subtitle={`Pick 4 digits for ${me?.full_name ?? "this account"}`}
           onComplete={saveNewPin}
           onCancel={() => setPinSetup(false)}

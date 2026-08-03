@@ -11,8 +11,8 @@ export interface Profile {
   role: UserRole;
   phone: string | null;
   is_active: boolean;
-  /** bcrypt hash of the employee's 4-digit view code; null until they set one */
-  pin_hash?: string | null;
+  /** The address they sign in with. */
+  email?: string | null;
   created_at: string;
 }
 
