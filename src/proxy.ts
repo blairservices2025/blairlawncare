@@ -1,12 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  SUPABASE_ANON_KEY,
+  SUPABASE_URL,
+  supabaseConfigured,
+} from "@/lib/supabase/env";
 
 export async function proxy(request: NextRequest) {
+  // Without Supabase credentials there is no session to read. Let the request
+  // through so the pages can render a "setup needed" message, rather than
+  // every request failing here with no explanation.
+  if (!supabaseConfigured) return NextResponse.next({ request });
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
