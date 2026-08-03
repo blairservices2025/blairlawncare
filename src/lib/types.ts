@@ -96,6 +96,9 @@ export interface TimeOffRequest {
   employee_id: string;
   start_date: string;
   end_date: string;
+  /** null on both = all day; otherwise a window on that date */
+  start_time?: string | null;
+  end_time?: string | null;
   reason: string | null;
   status: TimeOffStatus;
   reviewed_by: string | null;

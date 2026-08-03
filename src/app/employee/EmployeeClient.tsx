@@ -12,6 +12,7 @@ import {
   Empty,
   Input,
   Label,
+  Textarea,
 } from "@/components/ui";
 import {
   addDays,
@@ -69,7 +70,13 @@ export default function EmployeeClient() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [jobName, setJobName] = useState("");
-  const [toForm, setToForm] = useState({ start: "", end: "", reason: "" });
+  const [toForm, setToForm] = useState({
+    date: "",
+    startTime: "",
+    endTime: "",
+    reason: "",
+    allDay: true,
+  });
   const [loading, setLoading] = useState(true);
 
   useTicker(!!openClock || !!openTimer);
@@ -201,16 +208,46 @@ export default function EmployeeClient() {
     load();
   }
 
+  const [toError, setToError] = useState<string | null>(null);
+
   async function requestTimeOff() {
-    if (!me || !toForm.start || !toForm.end) return;
-    await supabase.from("time_off_requests").insert({
+    if (!me) return;
+    if (!toForm.date) {
+      setToError("Pick a date.");
+      return;
+    }
+    if (!toForm.allDay) {
+      if (!toForm.startTime || !toForm.endTime) {
+        setToError("Add a start and end time, or choose all day.");
+        return;
+      }
+      if (toForm.endTime <= toForm.startTime) {
+        setToError("The end time has to be after the start time.");
+        return;
+      }
+    }
+    setToError(null);
+
+    const { error } = await supabase.from("time_off_requests").insert({
       employee_id: me.id,
-      start_date: toForm.start,
-      end_date: toForm.end,
+      start_date: toForm.date,
+      end_date: toForm.date,
+      start_time: toForm.allDay ? null : toForm.startTime,
+      end_time: toForm.allDay ? null : toForm.endTime,
       reason: toForm.reason || null,
       status: "pending",
     });
-    setToForm({ start: "", end: "", reason: "" });
+    if (error) {
+      setToError(error.message);
+      return;
+    }
+    setToForm({
+      date: "",
+      startTime: "",
+      endTime: "",
+      reason: "",
+      allDay: true,
+    });
     load();
   }
 
@@ -422,38 +459,86 @@ export default function EmployeeClient() {
 
         {/* Time off */}
         <Card title="Request time off">
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="space-y-3">
             <div>
-              <Label>From</Label>
+              <Label>Date</Label>
               <Input
                 type="date"
-                value={toForm.start}
-                onChange={(e) => setToForm({ ...toForm, start: e.target.value })}
+                value={toForm.date}
+                onChange={(e) => setToForm({ ...toForm, date: e.target.value })}
               />
             </div>
+
+            <label className="flex items-center gap-2 text-[13px] font-medium">
+              <input
+                type="checkbox"
+                checked={toForm.allDay}
+                onChange={(e) =>
+                  setToForm({ ...toForm, allDay: e.target.checked })
+                }
+                className="accent-[var(--cut)]"
+              />
+              All day
+            </label>
+
+            {!toForm.allDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Start time</Label>
+                  <Input
+                    type="time"
+                    value={toForm.startTime}
+                    onChange={(e) =>
+                      setToForm({ ...toForm, startTime: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>End time</Label>
+                  <Input
+                    type="time"
+                    value={toForm.endTime}
+                    onChange={(e) =>
+                      setToForm({ ...toForm, endTime: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
-              <Label>To</Label>
-              <Input
-                type="date"
-                value={toForm.end}
-                onChange={(e) => setToForm({ ...toForm, end: e.target.value })}
+              <Label>Reason</Label>
+              <Textarea
+                rows={2}
+                placeholder="Doctor's appointment, family thing, etc."
+                value={toForm.reason}
+                onChange={(e) =>
+                  setToForm({ ...toForm, reason: e.target.value })
+                }
               />
             </div>
+
+            {toError && (
+              <p className="text-sm text-[var(--status-overdue-fg)]">{toError}</p>
+            )}
+            <Button onClick={requestTimeOff}>Send request</Button>
           </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Reason (optional)"
-              value={toForm.reason}
-              onChange={(e) => setToForm({ ...toForm, reason: e.target.value })}
-            />
-            <Button onClick={requestTimeOff}>Request</Button>
-          </div>
+
           {timeOff.length > 0 && (
-            <ul className="mt-3 divide-y divide-line">
+            <ul className="mt-4 divide-y divide-line border-t border-line pt-1">
               {timeOff.map((t) => (
-                <li key={t.id} className="py-1.5 flex justify-between items-center text-sm">
+                <li
+                  key={t.id}
+                  className="py-2 flex justify-between items-start gap-2 text-[13px]"
+                >
                   <span>
-                    {fmtDate(t.start_date)} → {fmtDate(t.end_date)}
+                    <span className="font-semibold">{fmtDate(t.start_date)}</span>
+                    <span className="block text-ink-soft text-xs mt-0.5">
+                      {t.start_time && t.end_time
+                        ? `${fmtClock(t.start_time)} – ${fmtClock(t.end_time)}`
+                        : "All day"}
+                      {t.reason ? ` · ${t.reason}` : ""}
+                    </span>
                   </span>
                   <Badge
                     tone={

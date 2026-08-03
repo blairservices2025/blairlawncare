@@ -319,7 +319,13 @@ export default function SchedulePage() {
                       {t.profiles?.full_name}
                     </div>
                     <div className="text-xs text-ink-soft">
-                      {fmtDate(t.start_date)} → {fmtDate(t.end_date)}
+                      {t.start_date === t.end_date
+                        ? fmtDate(t.start_date)
+                        : `${fmtDate(t.start_date)} → ${fmtDate(t.end_date)}`}
+                      {" · "}
+                      {t.start_time && t.end_time
+                        ? `${fmtClock(t.start_time)} – ${fmtClock(t.end_time)}`
+                        : "All day"}
                       {t.reason ? ` · ${t.reason}` : ""}
                     </div>
                   </div>
