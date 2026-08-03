@@ -38,7 +38,18 @@ function LoginForm() {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) return body.error ?? "That didn't work. Try again.";
-    if (!body.tokenHash) return "Signed in, but no session came back.";
+    if (!body.tokenHash) {
+      // The page and the endpoint can briefly disagree while a new
+      // version rolls out. If a session exists anyway, go; otherwise say
+      // what actually fixes it.
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.push("/");
+        router.refresh();
+        return null;
+      }
+      return `No session came back${body.ok ? "" : ` (${body.error ?? "unknown"})`}. This page may be running an older copy of the app — refresh and try again.`;
+    }
 
     // Redeem the one-time token here so this browser's Supabase client
     // holds the session — the rest of the app reads it from there.
