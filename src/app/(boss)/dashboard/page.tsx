@@ -112,11 +112,11 @@ export default function OverviewPage() {
       daysOverdue(c.last_service_date) >= 6
   );
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Overview</h1>
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Overview</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatTile label="Jobs today" value={String(jobs.length)} />
@@ -141,7 +141,7 @@ export default function OverviewPage() {
         <Card
           title="Today's schedule"
           action={
-            <Link href="/schedule" className="text-xs text-accent font-medium">
+            <Link href="/schedule" className="text-xs text-cut font-medium">
               Full schedule →
             </Link>
           }
@@ -156,7 +156,7 @@ export default function OverviewPage() {
                     <div className="text-sm font-medium">
                       {j.customers?.name ?? "Unknown"}
                     </div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-ink-soft">
                       {j.customers?.address ?? ""}
                       {j.profiles?.full_name
                         ? ` · ${j.profiles.full_name}`
@@ -183,7 +183,7 @@ export default function OverviewPage() {
         <Card
           title="Crew status"
           action={
-            <Link href="/crew" className="text-xs text-accent font-medium">
+            <Link href="/crew" className="text-xs text-cut font-medium">
               Crew →
             </Link>
           }
@@ -246,16 +246,16 @@ export default function OverviewPage() {
                     className="accent-[var(--accent)]"
                   />
                   <span
-                    className={`text-sm flex-1 ${t.done ? "line-through text-muted" : ""}`}
+                    className={`text-sm flex-1 ${t.done ? "line-through text-ink-soft" : ""}`}
                   >
                     {t.text}
                   </span>
-                  <span className="text-xs text-muted">
+                  <span className="text-xs text-ink-soft">
                     {t.profiles?.full_name ?? "Everyone"}
                   </span>
                   <button
                     onClick={() => deleteTodo(t.id)}
-                    className="text-muted hover:text-serious text-sm"
+                    className="text-ink-soft hover:text-[var(--status-overdue-fg)] text-sm"
                     aria-label="Delete"
                   >
                     ✕
@@ -269,7 +269,7 @@ export default function OverviewPage() {
         <Card
           title="Service flags"
           action={
-            <Link href="/customers" className="text-xs text-accent font-medium">
+            <Link href="/customers" className="text-xs text-cut font-medium">
               Customers →
             </Link>
           }
@@ -282,7 +282,7 @@ export default function OverviewPage() {
                 <li key={c.id} className="py-2 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">{c.name}</div>
-                    <div className="text-xs text-muted">{c.address}</div>
+                    <div className="text-xs text-ink-soft">{c.address}</div>
                   </div>
                   <Badge tone="serious">
                     ⚠ {daysOverdue(c.last_service_date!)} days since service

@@ -69,27 +69,39 @@ export default function TopNav({
 
   return (
     <>
-      <header className="bg-sidebar sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4">
+      <header className="mow-stripes sticky top-0 z-40 text-[var(--bone)]">
+        <div className="max-w-[1240px] mx-auto px-5 md:px-7">
           {/* Title row */}
-          <div className="flex items-center justify-between py-3">
-            <Link href="/dashboard" className="font-bold text-white text-lg">
-              🌱 Blair Lawn Care
+          <div className="flex items-center justify-between py-3 gap-4">
+            <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
+              <span className="w-[26px] h-[26px] rounded-md bg-cut flex items-center justify-center text-sm">
+                🌱
+              </span>
+              <span className="leading-[1.1]">
+                <span className="display block font-semibold text-[15.5px] tracking-[0.1px] whitespace-nowrap">
+                  Blair Lawn Care
+                </span>
+                <span className="block text-[9.5px] font-medium tracking-[1.2px] uppercase text-cut-light mt-px">
+                  Operations
+                </span>
+              </span>
             </Link>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setPicking(true)}
-                className="text-xs text-white/80 hover:text-white border border-white/25 rounded-lg px-2.5 py-1.5"
+                className="text-xs font-semibold text-[rgba(246,243,234,0.72)] hover:text-[var(--white)] border border-[rgba(246,243,234,0.14)] hover:border-[rgba(246,243,234,0.3)] rounded-lg px-3.5 py-2 whitespace-nowrap"
               >
                 🔀 Employee view
               </button>
               <div className="hidden sm:block text-right leading-tight">
-                <div className="text-xs text-white/50">Signed in as</div>
-                <div className="text-sm text-white font-medium">{name}</div>
+                <div className="text-[9.5px] uppercase tracking-[1px] text-[rgba(246,243,234,0.55)]">
+                  Signed in
+                </div>
+                <div className="text-[13px] font-medium">{name}</div>
               </div>
               <button
                 onClick={signOut}
-                className="text-xs text-white/60 hover:text-white"
+                className="text-xs text-[rgba(246,243,234,0.55)] hover:text-[var(--white)]"
               >
                 Sign out
               </button>
@@ -97,17 +109,17 @@ export default function TopNav({
           </div>
 
           {/* Tab row */}
-          <nav className="flex gap-1 overflow-x-auto -mx-1 px-1">
+          <nav className="flex gap-0.5 overflow-x-auto no-scrollbar -mx-1 px-1">
             {NAV.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-colors ${
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors ${
                     active
-                      ? "bg-background text-foreground"
-                      : "text-white/70 hover:bg-sidebar-hover hover:text-white"
+                      ? "bg-pine-light text-[var(--white)] shadow-[inset_0_-2px_0_var(--gold)]"
+                      : "text-[rgba(246,243,234,0.72)] hover:bg-pine-light hover:text-[var(--bone)]"
                   }`}
                 >
                   {item.label}
@@ -125,16 +137,16 @@ export default function TopNav({
           onClick={() => setPicking(false)}
         >
           <div
-            className="bg-surface rounded-2xl shadow-xl w-full max-w-xs p-5"
+            className="bg-paper rounded-2xl shadow-xl w-full max-w-xs p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-bold text-center mb-1">Whose view?</h3>
-            <p className="text-sm text-muted text-center mb-4">
+            <h3 className="display font-semibold text-center mb-1">Whose view?</h3>
+            <p className="text-sm text-ink-soft text-center mb-4">
               Pick a crew member, then enter their code.
             </p>
             <div className="space-y-1.5 max-h-72 overflow-y-auto">
               {employees.length === 0 && (
-                <p className="text-sm text-muted text-center py-4">
+                <p className="text-sm text-ink-soft text-center py-4">
                   No crew members yet.
                 </p>
               )}
@@ -142,7 +154,7 @@ export default function TopNav({
                 <button
                   key={e.id}
                   onClick={() => setTarget(e)}
-                  className="w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium bg-accent-soft text-accent-strong hover:bg-accent hover:text-white transition-colors"
+                  className="w-full text-left rounded-lg px-3 py-2.5 text-sm font-medium bg-bone-dim text-pine hover:bg-cut hover:text-[var(--white)] transition-colors"
                 >
                   {e.full_name}
                 </button>
@@ -150,7 +162,7 @@ export default function TopNav({
             </div>
             <button
               onClick={() => setPicking(false)}
-              className="w-full mt-3 text-sm text-muted hover:text-foreground py-2"
+              className="w-full mt-3 text-sm text-ink-soft hover:text-ink py-2"
             >
               Cancel
             </button>
@@ -171,7 +183,7 @@ export default function TopNav({
           footer={
             <button
               onClick={() => router.push(`/employee?as=${target.id}&setpin=1`)}
-              className="text-xs text-muted hover:text-accent underline"
+              className="text-xs text-ink-soft hover:text-cut underline"
             >
               Forgot your code?
             </button>

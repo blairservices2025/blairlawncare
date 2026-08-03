@@ -160,14 +160,14 @@ export default function SchedulePage() {
     }
   }
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   const pendingTimeOff = timeOff.filter((t) => t.status === "pending");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-bold">Schedule</h1>
+        <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Schedule</h1>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             ← Prev
@@ -180,7 +180,7 @@ export default function SchedulePage() {
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted">
+      <p className="text-xs text-ink-soft">
         Drag a shift or job card onto another day to move it.
       </p>
 
@@ -193,8 +193,8 @@ export default function SchedulePage() {
               onDrop={(e) => onDrop(e, d)}
               className={`rounded-xl border p-2 min-h-64 flex flex-col gap-1.5 ${
                 d === todayISO()
-                  ? "border-accent bg-accent-soft/50"
-                  : "border-line bg-surface"
+                  ? "border-cut bg-bone-dim/50"
+                  : "border-line bg-paper"
               }`}
             >
               <div className="text-xs font-semibold text-center pb-1 border-b border-line">
@@ -210,7 +210,7 @@ export default function SchedulePage() {
                     onDragStart={(e) =>
                       e.dataTransfer.setData("text/plain", `shift:${s.id}`)
                     }
-                    className="rounded-lg bg-sidebar text-white px-2 py-1.5 text-xs cursor-grab group"
+                    className="rounded-lg bg-pine text-[var(--white)] px-2 py-1.5 text-xs cursor-grab group"
                   >
                     <div className="font-medium flex justify-between">
                       {s.profiles?.full_name}
@@ -239,8 +239,8 @@ export default function SchedulePage() {
                     }
                     className={`rounded-lg px-2 py-1.5 text-xs cursor-grab group border ${
                       j.status === "done"
-                        ? "bg-accent-soft border-accent/40"
-                        : "bg-surface border-line"
+                        ? "bg-bone-dim border-cut/40"
+                        : "bg-paper border-line"
                     }`}
                   >
                     <div className="font-medium flex justify-between gap-1">
@@ -253,7 +253,7 @@ export default function SchedulePage() {
                         ✕
                       </button>
                     </div>
-                    <div className="text-muted truncate">
+                    <div className="text-ink-soft truncate">
                       {j.profiles?.full_name ?? "unassigned"}
                       {j.recurrence !== "one_time" ? ` · ${j.recurrence}` : ""}
                     </div>
@@ -265,13 +265,13 @@ export default function SchedulePage() {
                   onClick={() =>
                     setShiftForm({ ...shiftForm, open: true, date: d })
                   }
-                  className="flex-1 text-[11px] text-muted hover:text-accent border border-dashed border-line rounded-md py-1"
+                  className="flex-1 text-[11px] text-ink-soft hover:text-cut border border-dashed border-line rounded-md py-1"
                 >
                   + shift
                 </button>
                 <button
                   onClick={() => setJobForm({ ...jobForm, open: true, date: d })}
-                  className="flex-1 text-[11px] text-muted hover:text-accent border border-dashed border-line rounded-md py-1"
+                  className="flex-1 text-[11px] text-ink-soft hover:text-cut border border-dashed border-line rounded-md py-1"
                 >
                   + job
                 </button>
@@ -291,7 +291,7 @@ export default function SchedulePage() {
                 <li key={c.id} className="py-2 flex items-center justify-between gap-2">
                   <div>
                     <div className="text-sm font-medium">{c.name}</div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-ink-soft">
                       {c.plan.replace("_", "-")} · last service{" "}
                       {fmtDate(c.last_service_date)}
                     </div>
@@ -318,7 +318,7 @@ export default function SchedulePage() {
                     <div className="text-sm font-medium">
                       {t.profiles?.full_name}
                     </div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-ink-soft">
                       {fmtDate(t.start_date)} → {fmtDate(t.end_date)}
                       {t.reason ? ` · ${t.reason}` : ""}
                     </div>

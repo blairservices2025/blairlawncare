@@ -48,13 +48,13 @@ export default function JobsPage() {
     return acc;
   }, {});
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   const JobRow = ({ j }: { j: ScheduledJob }) => (
     <li className="py-2 flex items-center justify-between gap-3 flex-wrap">
       <div className="min-w-0">
         <div className="text-sm font-medium">{j.customers?.name}</div>
-        <div className="text-xs text-muted truncate">
+        <div className="text-xs text-ink-soft truncate">
           {j.customers?.address ?? ""}
           {j.profiles?.full_name ? ` · ${j.profiles.full_name}` : " · unassigned"}
           {j.note ? ` · ${j.note}` : ""}
@@ -78,7 +78,7 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Jobs</h1>
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Jobs</h1>
 
       <Card title={`Today — ${dayLabel(today)}`}>
         {todays.length === 0 ? (
@@ -98,7 +98,7 @@ export default function JobsPage() {
         ) : (
           Object.entries(byDay).map(([date, list]) => (
             <div key={date} className="mb-3">
-              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-1">
+              <div className="text-xs font-semibold text-ink-soft uppercase tracking-wide mb-1">
                 {dayLabel(date)}
               </div>
               <ul className="divide-y divide-line">

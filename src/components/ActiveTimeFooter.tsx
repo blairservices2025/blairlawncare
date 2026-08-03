@@ -70,20 +70,20 @@ export default function ActiveTimeFooter() {
 
   return (
     <footer className="border-t border-line mt-8">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xs text-muted">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-xs text-ink-soft">
         <span>
           Time on the app this session:{" "}
-          <strong className="text-foreground tabular-nums font-mono">
+          <strong className="text-ink tabular-nums font-mono">
             {hms(sessionS)}
           </strong>
         </span>
         <span>
           Today in total:{" "}
-          <strong className="text-foreground tabular-nums font-mono">
+          <strong className="text-ink tabular-nums font-mono">
             {todayS === null ? "—" : hms(todayS)}
           </strong>
         </span>
-        <span className="text-muted/70">🌱 Blair Lawn Care</span>
+        <span className="text-ink-soft/70">🌱 Blair Lawn Care</span>
       </div>
     </footer>
   );

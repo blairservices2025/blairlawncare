@@ -35,7 +35,7 @@ export default function RevenuePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   const today = todayISO();
   const weekStart = mondayOf(today);
@@ -104,7 +104,7 @@ export default function RevenuePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Revenue</h1>
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Revenue</h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatTile label="Collected this week" value={usd(paidThisWeek)} tone="good" />

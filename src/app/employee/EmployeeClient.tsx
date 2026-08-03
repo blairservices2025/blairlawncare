@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PinPad from "@/components/PinPad";
+import ReceiptCapture from "@/components/ReceiptCapture";
 import {
   Badge,
   Button,
@@ -69,10 +70,6 @@ export default function EmployeeClient() {
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [jobName, setJobName] = useState("");
   const [toForm, setToForm] = useState({ start: "", end: "", reason: "" });
-  const [receiptNote, setReceiptNote] = useState("");
-  const [receiptAmount, setReceiptAmount] = useState("");
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
 
   useTicker(!!openClock || !!openTimer);
@@ -217,29 +214,6 @@ export default function EmployeeClient() {
     load();
   }
 
-  async function uploadReceipt(file: File) {
-    if (!me) return;
-    setUploadStatus("Uploading…");
-    const path = `${me.id}/${crypto.randomUUID()}-${file.name}`;
-    const { error: upErr } = await supabase.storage
-      .from("receipts")
-      .upload(path, file);
-    if (upErr) {
-      setUploadStatus(`Upload failed: ${upErr.message}`);
-      return;
-    }
-    const { error: dbErr } = await supabase.from("receipts").insert({
-      uploaded_by: me.id,
-      file_path: path,
-      note: receiptNote || null,
-      amount: receiptAmount ? Number(receiptAmount) : null,
-    });
-    setUploadStatus(dbErr ? `Save failed: ${dbErr.message}` : "Receipt saved ✔");
-    setReceiptNote("");
-    setReceiptAmount("");
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
   async function signOut() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -280,18 +254,18 @@ export default function EmployeeClient() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background p-4">
-        <p className="text-muted text-sm">Loading…</p>
+      <main className="min-h-screen bg-bone p-4">
+        <p className="text-ink-soft text-sm">Loading…</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="bg-sidebar text-white px-4 py-4 flex items-center justify-between gap-3">
+    <main className="min-h-screen bg-bone">
+      <header className="mow-stripes text-[var(--bone)] px-4 py-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-bold">🌱 Blair Lawn Care</div>
-          <div className="text-xs text-white/60 truncate">
+          <div className="display font-semibold text-[15.5px]">🌱 Blair Lawn Care</div>
+          <div className="text-xs text-[var(--white)]/60 truncate">
             {me?.full_name} · employee view
             {viewingId !== viewer?.id ? " (opened by the boss)" : ""}
           </div>
@@ -299,11 +273,11 @@ export default function EmployeeClient() {
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => setBossGate(true)}
-            className="text-xs text-white/80 hover:text-white border border-white/25 rounded-lg px-2.5 py-1.5"
+            className="text-xs text-[var(--white)]/80 hover:text-[var(--white)] border border-white/25 rounded-lg px-2.5 py-1.5"
           >
             🔀 Boss view
           </button>
-          <button onClick={signOut} className="text-xs text-white/60 hover:text-white">
+          <button onClick={signOut} className="text-xs text-[var(--white)]/60 hover:text-[var(--white)]">
             Sign out
           </button>
         </div>
@@ -315,7 +289,7 @@ export default function EmployeeClient() {
           <div className="text-center py-2">
             {openClock ? (
               <>
-                <div className="text-xs uppercase tracking-wide text-good font-semibold">
+                <div className="text-xs uppercase tracking-wide text-cut font-semibold">
                   ● On the clock since {fmtTime(openClock.clock_in)}
                 </div>
                 <div className="text-4xl font-bold tabular-nums my-3">
@@ -327,7 +301,7 @@ export default function EmployeeClient() {
               </>
             ) : (
               <>
-                <div className="text-xs uppercase tracking-wide text-muted font-semibold">
+                <div className="text-xs uppercase tracking-wide text-ink-soft font-semibold">
                   Off the clock
                 </div>
                 <Button onClick={clockIn} className="w-full !py-3 mt-3">
@@ -366,7 +340,7 @@ export default function EmployeeClient() {
               {recentTimers.map((t) => (
                 <li key={t.id} className="py-1.5 flex justify-between text-sm">
                   <span>{t.job_name}</span>
-                  <span className="text-muted tabular-nums">
+                  <span className="text-ink-soft tabular-nums">
                     {fmtDuration(hoursBetween(t.started_at, t.ended_at))}
                   </span>
                 </li>
@@ -394,7 +368,7 @@ export default function EmployeeClient() {
                   <span>
                     <span className="font-medium">{dayLabel(j.job_date)}</span>{" "}
                     · 🌿 {j.customers?.name}
-                    <span className="text-muted text-xs block">
+                    <span className="text-ink-soft text-xs block">
                       {j.customers?.address}
                     </span>
                   </span>
@@ -431,12 +405,12 @@ export default function EmployeeClient() {
                     className="accent-[var(--accent)]"
                   />
                   <span
-                    className={`text-sm ${t.done ? "line-through text-muted" : ""}`}
+                    className={`text-sm ${t.done ? "line-through text-ink-soft" : ""}`}
                   >
                     {t.text}
                   </span>
                   {t.employee_id === null && (
-                    <span className="text-xs text-muted ml-auto">everyone</span>
+                    <span className="text-xs text-ink-soft ml-auto">everyone</span>
                   )}
                 </li>
               ))}
@@ -444,38 +418,7 @@ export default function EmployeeClient() {
           )}
         </Card>
 
-        {/* Receipt capture */}
-        <Card title="Capture a receipt">
-          <div className="space-y-2">
-            <Input
-              placeholder="Note (e.g. gas, mower blades)"
-              value={receiptNote}
-              onChange={(e) => setReceiptNote(e.target.value)}
-            />
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Amount (optional)"
-              value={receiptAmount}
-              onChange={(e) => setReceiptAmount(e.target.value)}
-            />
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) uploadReceipt(f);
-              }}
-              className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-foreground"
-            />
-            {uploadStatus && (
-              <p className="text-sm text-muted">{uploadStatus}</p>
-            )}
-          </div>
-        </Card>
+        <ReceiptCapture uploaderId={viewingId} title="Capture a receipt" />
 
         {/* Time off */}
         <Card title="Request time off">
@@ -531,7 +474,7 @@ export default function EmployeeClient() {
 
         {/* Personal code */}
         <Card title="My 4-digit code">
-          <p className="text-sm text-muted mb-3">
+          <p className="text-sm text-ink-soft mb-3">
             This is the code you type to open your view on a shared phone or
             tablet. Forgot it? Enter <strong>0000</strong> at the code screen
             and you&apos;ll be asked to pick a new one.
@@ -540,7 +483,7 @@ export default function EmployeeClient() {
             {me?.pin_hash ? "Change my code" : "Set up my code"}
           </Button>
           {pinStatus && (
-            <p className="text-sm text-good mt-2">{pinStatus}</p>
+            <p className="text-sm text-cut mt-2">{pinStatus}</p>
           )}
         </Card>
       </div>

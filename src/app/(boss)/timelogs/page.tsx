@@ -38,11 +38,11 @@ export default function TimeLogsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Time Logs</h1>
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Time Logs</h1>
 
       <Card title="Clock in / out">
         {clock.length === 0 ? (

@@ -126,12 +126,12 @@ export default function InvoicesPage() {
     (i) => filter === "all" || effectiveStatus(i) === filter
   );
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-bold">Invoices</h1>
+        <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Invoices</h1>
         <div className="flex gap-2 items-center">
           <Select
             value={filter}
@@ -166,7 +166,7 @@ export default function InvoicesPage() {
                     <div className="text-sm font-medium">
                       {i.customers?.name ?? "Unknown"} — {i.description}
                     </div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-ink-soft">
                       Issued {fmtDate(i.issue_date)} · Due {fmtDate(i.due_date)}
                       {i.recurrence !== "one_time"
                         ? ` · repeats ${i.recurrence.replace("_", "-")}`
@@ -219,7 +219,7 @@ export default function InvoicesPage() {
                     )}
                     <button
                       onClick={() => remove(i)}
-                      className="text-muted hover:text-serious text-sm"
+                      className="text-ink-soft hover:text-[var(--status-overdue-fg)] text-sm"
                       aria-label="Delete invoice"
                     >
                       ✕
@@ -292,7 +292,7 @@ export default function InvoicesPage() {
               <option value="custom">Custom</option>
             </Select>
           </div>
-          {error && <p className="text-sm text-serious">{error}</p>}
+          {error && <p className="text-sm text-[var(--status-overdue-fg)]">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="secondary" onClick={() => setShowForm(false)}>
               Cancel

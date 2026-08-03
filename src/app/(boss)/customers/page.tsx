@@ -168,12 +168,12 @@ export default function CustomersPage() {
     load();
   }
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Customers</h1>
+        <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Customers</h1>
         <Button onClick={startAdd}>+ Add customer</Button>
       </div>
 
@@ -190,7 +190,7 @@ export default function CustomersPage() {
               return (
                 <li
                   key={c.id}
-                  className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-accent-soft/40 -mx-2 px-2 rounded-lg"
+                  className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-bone-dim/40 -mx-2 px-2 rounded-lg"
                   onClick={() => openDetail(c)}
                 >
                   <div className="min-w-0">
@@ -198,13 +198,13 @@ export default function CustomersPage() {
                       {c.name}
                       {flag && <Badge tone="serious">⚠ overdue</Badge>}
                     </div>
-                    <div className="text-xs text-muted truncate">
+                    <div className="text-xs text-ink-soft truncate">
                       {c.address ?? "No address"} · {c.phone ?? "no phone"}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge tone="neutral">{c.plan.replace("_", "-")}</Badge>
-                    <span className="text-xs text-muted">
+                    <span className="text-xs text-ink-soft">
                       Last: {fmtDate(c.last_service_date)}
                     </span>
                   </div>
@@ -226,35 +226,35 @@ export default function CustomersPage() {
           <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <div className="text-xs text-muted">Phone</div>
+                <div className="text-xs text-ink-soft">Phone</div>
                 {selected.phone ?? "—"}
               </div>
               <div>
-                <div className="text-xs text-muted">Email</div>
+                <div className="text-xs text-ink-soft">Email</div>
                 {selected.email ?? "—"}
               </div>
               <div>
-                <div className="text-xs text-muted">Address</div>
+                <div className="text-xs text-ink-soft">Address</div>
                 {selected.address ?? "—"}
               </div>
               <div>
-                <div className="text-xs text-muted">Plan / price</div>
+                <div className="text-xs text-ink-soft">Plan / price</div>
                 {selected.plan.replace("_", "-")}
                 {selected.price != null ? ` · ${usd(Number(selected.price))}` : ""}
               </div>
               <div>
-                <div className="text-xs text-muted">Last service</div>
+                <div className="text-xs text-ink-soft">Last service</div>
                 {fmtDate(selected.last_service_date)}
               </div>
               <div>
-                <div className="text-xs text-muted">Card on file (reference)</div>
+                <div className="text-xs text-ink-soft">Card on file (reference)</div>
                 {selected.card_brand
                   ? `${selected.card_brand} •••• ${selected.card_last4} (exp ${selected.card_exp})`
                   : "None"}
               </div>
             </div>
             {selected.notes && (
-              <p className="text-sm bg-accent-soft rounded-lg p-3">{selected.notes}</p>
+              <p className="text-sm bg-bone-dim rounded-lg p-3">{selected.notes}</p>
             )}
             <div className="flex gap-2 flex-wrap">
               <Button variant="secondary" onClick={() => startEdit(selected)}>
@@ -276,7 +276,7 @@ export default function CustomersPage() {
             <div>
               <h4 className="text-sm font-semibold mb-1">Invoices</h4>
               {invoices.length === 0 ? (
-                <p className="text-xs text-muted">No invoices.</p>
+                <p className="text-xs text-ink-soft">No invoices.</p>
               ) : (
                 <ul className="divide-y divide-line">
                   {invoices.map((i) => (
@@ -307,7 +307,7 @@ export default function CustomersPage() {
             <div>
               <h4 className="text-sm font-semibold mb-1">Job history</h4>
               {jobs.length === 0 ? (
-                <p className="text-xs text-muted">No jobs yet.</p>
+                <p className="text-xs text-ink-soft">No jobs yet.</p>
               ) : (
                 <ul className="divide-y divide-line">
                   {jobs.map((j) => (
@@ -421,7 +421,7 @@ export default function CustomersPage() {
             />
           </div>
           <div className="sm:col-span-2 border-t border-line pt-3">
-            <p className="text-xs text-muted mb-2">
+            <p className="text-xs text-ink-soft mb-2">
               Card on file — <strong>reference only</strong> (brand, last 4,
               expiry). Never enter a full card number; real charging is wired up
               later via a payment processor.
@@ -462,7 +462,7 @@ export default function CustomersPage() {
             </div>
           </div>
         </div>
-        {error && <p className="text-sm text-serious mt-3">{error}</p>}
+        {error && <p className="text-sm text-[var(--status-overdue-fg)] mt-3">{error}</p>}
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="secondary" onClick={() => setShowForm(false)}>
             Cancel

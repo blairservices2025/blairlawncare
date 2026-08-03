@@ -31,18 +31,18 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-sidebar p-4">
+    <main className="min-h-screen flex items-center justify-center mow-stripes p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🌱</div>
-          <h1 className="text-2xl font-bold text-white">Blair Lawn Care</h1>
-          <p className="text-sm text-white/60 mt-1">
+          <div className="w-12 h-12 rounded-xl bg-cut mx-auto mb-3 flex items-center justify-center text-2xl">🌱</div>
+          <h1 className="display text-[28px] font-semibold text-[var(--white)]">Blair Lawn Care</h1>
+          <p className="text-sm text-[var(--white)]/60 mt-1">
             Sign in to your dashboard
           </p>
         </div>
         <form
           onSubmit={signIn}
-          className="bg-surface rounded-xl p-6 shadow-xl space-y-4"
+          className="bg-paper border border-line rounded-xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.25)] space-y-4"
         >
           <div>
             <Label>Email</Label>
@@ -66,11 +66,11 @@ export default function LoginClient() {
               autoComplete="current-password"
             />
           </div>
-          {error && <p className="text-sm text-serious">{error}</p>}
+          {error && <p className="text-sm text-[var(--status-overdue-fg)]">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">
             {busy ? "Signing in…" : "Sign in"}
           </Button>
-          <p className="text-xs text-muted text-center">
+          <p className="text-xs text-ink-soft text-center">
             Accounts are created by the boss in the Supabase dashboard.
           </p>
         </form>

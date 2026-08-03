@@ -5,16 +5,16 @@
  */
 export default function SetupNeeded({ missing }: { missing: string[] }) {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-sidebar p-4">
-      <div className="w-full max-w-lg bg-surface rounded-xl p-6 shadow-xl">
+    <main className="min-h-screen flex items-center justify-center mow-stripes p-4">
+      <div className="w-full max-w-lg bg-paper rounded-xl p-6 shadow-xl">
         <div className="text-3xl mb-2">🌱</div>
-        <h1 className="text-xl font-bold mb-1">Almost there</h1>
-        <p className="text-sm text-muted mb-4">
+        <h1 className="display text-xl font-semibold mb-1">Almost there</h1>
+        <p className="text-sm text-ink-soft mb-4">
           The app is deployed and running — it just doesn&apos;t know where your
           database is yet.
         </p>
 
-        <div className="bg-accent-soft rounded-lg p-4 mb-4">
+        <div className="bg-bone-dim rounded-lg p-4 mb-4">
           <p className="text-sm font-semibold mb-2">
             Missing environment variable{missing.length === 1 ? "" : "s"}:
           </p>
@@ -41,7 +41,7 @@ export default function SetupNeeded({ missing }: { missing: string[] }) {
           </li>
         </ol>
 
-        <p className="text-xs text-muted mt-4">
+        <p className="text-xs text-ink-soft mt-4">
           Full setup steps are in the README in your repository.
         </p>
       </div>

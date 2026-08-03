@@ -63,10 +63,10 @@ export default function PinPad({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-xs p-6">
-        <h3 className="text-center font-bold text-lg">{title}</h3>
+      <div className="bg-paper rounded-2xl shadow-xl w-full max-w-xs p-6">
+        <h3 className="display text-center font-semibold text-lg">{title}</h3>
         {subtitle && (
-          <p className="text-center text-sm text-muted mt-1">{subtitle}</p>
+          <p className="text-center text-sm text-ink-soft mt-1">{subtitle}</p>
         )}
 
         {/* Dots */}
@@ -76,7 +76,7 @@ export default function PinPad({
               key={i}
               className={`w-4 h-4 rounded-full border-2 transition-colors ${
                 i < pin.length
-                  ? "bg-accent border-accent"
+                  ? "bg-cut border-cut"
                   : "border-line bg-transparent"
               }`}
             />
@@ -84,7 +84,7 @@ export default function PinPad({
         </div>
 
         {error && (
-          <p className="text-center text-sm text-serious mb-3">{error}</p>
+          <p className="text-center text-sm text-[var(--status-overdue-fg)] mb-3">{error}</p>
         )}
 
         <div className="grid grid-cols-3 gap-2">
@@ -93,28 +93,28 @@ export default function PinPad({
               key={d}
               onClick={() => press(d)}
               disabled={checking}
-              className="h-14 rounded-xl bg-accent-soft text-xl font-semibold text-accent-strong hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
+              className="h-14 rounded-xl bg-bone-dim text-xl font-semibold text-pine hover:bg-cut hover:text-[var(--white)] transition-colors disabled:opacity-50"
             >
               {d}
             </button>
           ))}
           <button
             onClick={onCancel}
-            className="h-14 rounded-xl text-sm font-medium text-muted hover:bg-accent-soft"
+            className="h-14 rounded-xl text-sm font-medium text-ink-soft hover:bg-bone-dim"
           >
             Cancel
           </button>
           <button
             onClick={() => press("0")}
             disabled={checking}
-            className="h-14 rounded-xl bg-accent-soft text-xl font-semibold text-accent-strong hover:bg-accent hover:text-white transition-colors disabled:opacity-50"
+            className="h-14 rounded-xl bg-bone-dim text-xl font-semibold text-pine hover:bg-cut hover:text-[var(--white)] transition-colors disabled:opacity-50"
           >
             0
           </button>
           <button
             onClick={() => setPin((p) => p.slice(0, -1))}
             disabled={checking}
-            className="h-14 rounded-xl text-xl text-muted hover:bg-accent-soft disabled:opacity-50"
+            className="h-14 rounded-xl text-xl text-ink-soft hover:bg-bone-dim disabled:opacity-50"
             aria-label="Delete"
           >
             ⌫
@@ -122,7 +122,7 @@ export default function PinPad({
         </div>
 
         {checking && (
-          <p className="text-center text-xs text-muted mt-3">Checking…</p>
+          <p className="text-center text-xs text-ink-soft mt-3">Checking…</p>
         )}
         {footer && <div className="mt-4 text-center">{footer}</div>}
       </div>

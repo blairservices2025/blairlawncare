@@ -49,12 +49,12 @@ export default function CrewPage() {
     load();
   }
 
-  if (loading) return <p className="text-muted text-sm">Loading…</p>;
+  if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Crew</h1>
-      <p className="text-sm text-muted">
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Crew</h1>
+      <p className="text-sm text-ink-soft">
         New crew logins are created in Supabase (Authentication → Users →
         Add user) — they appear here automatically as employees.
       </p>
@@ -79,7 +79,7 @@ export default function CrewPage() {
                       </Badge>
                       {!p.is_active && <Badge tone="serious">inactive</Badge>}
                     </div>
-                    <div className="text-xs text-muted">
+                    <div className="text-xs text-ink-soft">
                       {fmtDuration(weekHours)} this week
                       {entry ? ` · on the clock since ${fmtTime(entry.clock_in)}` : ""}
                     </div>

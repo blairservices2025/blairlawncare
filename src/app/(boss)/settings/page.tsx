@@ -72,10 +72,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Settings</h1>
+      <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Settings</h1>
 
       <Card title="Backup / export">
-        <p className="text-sm text-muted mb-3">
+        <p className="text-sm text-ink-soft mb-3">
           Download every table as a single Excel workbook — one sheet each for
           invoices, customers, shifts, timesheets, timer logs, time off,
           to-dos, receipts, and jobs. Your data also lives safely in Supabase
@@ -85,20 +85,20 @@ export default function SettingsPage() {
         <Button onClick={exportAll} disabled={busy}>
           {busy ? "Exporting…" : "⬇ Export all data (.xlsx)"}
         </Button>
-        {status && <p className="text-sm text-muted mt-2">{status}</p>}
+        {status && <p className="text-sm text-ink-soft mt-2">{status}</p>}
       </Card>
 
       <Card title="Accounts">
-        <p className="text-sm text-muted">
+        <p className="text-sm text-ink-soft">
           Crew logins are managed in the Supabase dashboard (Authentication →
           Users). The first account ever created is the boss; everyone added
           after is an employee. To promote someone, edit their row in the{" "}
-          <code className="bg-accent-soft px-1 rounded">profiles</code> table.
+          <code className="bg-bone-dim px-1 rounded">profiles</code> table.
         </p>
       </Card>
 
       <Card title="What's next (from the build plan)">
-        <ul className="text-sm text-muted list-disc pl-5 space-y-1">
+        <ul className="text-sm text-ink-soft list-disc pl-5 space-y-1">
           <li>Phase 2 — QuickBooks accounting sync (invoices & customers)</li>
           <li>Phase 3 — QuickBooks Payments: real "charge card on file"</li>
           <li>Phase 5 — Payroll API (apply early; approval takes weeks)</li>
