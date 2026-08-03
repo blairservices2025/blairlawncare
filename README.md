@@ -61,6 +61,7 @@ row-level security rules.
    | `09-crew-job-board.sql` | the shared yard list the crew tick off |
    | `10-pin-login.sql` | signing in with an email and a 4-digit code |
    | `11-pin-hash-privacy.sql` | hides the code hashes from the browser |
+   | `12-job-billing.sql` | prices on jobs and the link to their Square invoice |
 3. Go to **Authentication → Users → Add user** and create **your own account
    first** (email + password, check "auto-confirm").
    ⚠️ The first account ever created automatically becomes the **boss** —
@@ -118,6 +119,7 @@ case-sensitive:
 | `SQUARE_ENVIRONMENT` | `production` or `sandbox` — must match the token |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API Keys → **Secret keys** |
 | `SQUARE_WEBHOOK_SIGNATURE_KEY` | Square → Webhooks → your subscription |
+| `NEXT_PUBLIC_SQUARE_APPLICATION_ID` | same Credentials page — needed to save cards |
 
 The Settings page reports which of these are still missing, shows the
 webhook address to paste into Square, and has a **Sync now** button that
@@ -126,10 +128,29 @@ pulls everything across.
 Point the Square webhook at the **production** address, not a preview one
 — preview URLs are frozen snapshots and change with every deployment.
 
-With Square connected you can also charge a customer's saved card from
-their profile or from an invoice, and send an invoice raised here to
-Square for the customer to pay. Cards are only ever added on Square's
-side; the app never handles a card number.
+### How the money side fits together
+
+Jobs live in this app; money lives in Square. Each job carries the id of
+the Square invoice raised for it, so the two stay linked without becoming
+the same record — which is what lets you void a charge or redo a job
+without corrupting job history.
+
+1. **Card on file, once per customer.** Customer profile → **＋ Card on
+   file**. The card is typed into a frame served by Square and tokenized
+   there; it never reaches this app or its database. Square requires the
+   customer to agree before a card is kept for future charges, so the
+   form asks you to confirm they did.
+2. **Work the day.** The crew tick yards off as they finish.
+3. **Bill at the end of the day.** Jobs tab → **Ready to bill** lists
+   finished, unbilled work. Send them and Square charges each saved card
+   and emails the invoice and receipt together; customers without a card
+   get an invoice to pay themselves.
+4. **Square confirms.** The invoice webhook marks each job paid or
+   flagged, so the job list and Square agree without checking both.
+
+Card-on-file charges sit on Square's card-not-present rate — about 3.5%
++ 15¢ per charge, higher than an invoice the customer pays themselves.
+The billing panel shows what that comes to before you send.
 
 The service role key is needed because Square's webhooks arrive with
 nobody signed in, so there is no session for the security rules to check.

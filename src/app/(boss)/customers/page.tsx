@@ -13,6 +13,7 @@ import {
   Select,
 } from "@/components/ui";
 import ChargeCardModal from "@/components/ChargeCardModal";
+import AddCardModal from "@/components/AddCardModal";
 import { daysOverdue, fmtDate, usd } from "@/lib/format";
 import type {
   Customer,
@@ -50,6 +51,7 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [charging, setCharging] = useState(false);
+  const [addingCard, setAddingCard] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("customers").select("*").order("name");
@@ -283,6 +285,9 @@ export default function CustomersPage() {
                   View contract
                 </Button>
               )}
+              <Button variant="secondary" onClick={() => setAddingCard(true)}>
+                ＋ Card on file
+              </Button>
               <Button onClick={() => setCharging(true)}>💳 Charge a card</Button>
               <Button variant="danger" onClick={() => removeCustomer(selected)}>
                 Delete
@@ -387,6 +392,14 @@ export default function CustomersPage() {
           </div>
         )}
       </Modal>
+
+      <AddCardModal
+        open={addingCard}
+        onClose={() => setAddingCard(false)}
+        customerId={selected?.id ?? null}
+        customerName={selected?.name ?? ""}
+        onSaved={load}
+      />
 
       <ChargeCardModal
         open={charging}
