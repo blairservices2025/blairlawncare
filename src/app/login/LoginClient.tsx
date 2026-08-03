@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui";
 
-export default function LoginPage() {
+export default function LoginClient() {
   const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState("");

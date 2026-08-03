@@ -50,7 +50,7 @@ function elapsed(fromIso: string) {
   return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
-export default function EmployeePage() {
+export default function EmployeeClient() {
   const supabase = createClient();
   const router = useRouter();
   const [me, setMe] = useState<Profile | null>(null);
