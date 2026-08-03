@@ -4,6 +4,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card } from "@/components/ui";
+import SquarePanel from "@/components/SquarePanel";
 import { todayISO } from "@/lib/format";
 
 const TABLES: { table: string; sheet: string; select: string }[] = [
@@ -87,6 +88,8 @@ export default function SettingsPage() {
         </Button>
         {status && <p className="text-sm text-ink-soft mt-2">{status}</p>}
       </Card>
+
+      <SquarePanel />
 
       <Card title="Accounts">
         <p className="text-sm text-ink-soft">
