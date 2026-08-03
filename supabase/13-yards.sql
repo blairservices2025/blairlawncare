@@ -126,7 +126,13 @@ $$;
 -- ---------- What the crew see ----------
 -- The yard's name and address is what matters in the field; the client's
 -- name comes along so they know whose place it is. Still no pricing.
-create or replace view public.job_board
+-- Dropped and rebuilt rather than replaced: CREATE OR REPLACE VIEW can
+-- only append columns, and this adds yard_id in the middle. Replacing it
+-- in place fails with "cannot change name of view column", which takes
+-- the whole script down with it.
+drop view if exists public.job_board;
+
+create view public.job_board
 with (security_invoker = off) as
 select
   j.id,
