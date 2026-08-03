@@ -55,11 +55,22 @@ export default function SquarePanel() {
     try {
       const res = await fetch("/api/square/sync", { method: "POST" });
       const body = await res.json();
-      setResult(
-        res.ok
-          ? `Pulled ${body.customers} customer${body.customers === 1 ? "" : "s"} and ${body.invoices} invoice${body.invoices === 1 ? "" : "s"} from Square.`
-          : `Failed: ${body.error}`
-      );
+
+      if (!res.ok) {
+        setResult(`Failed: ${body.error}`);
+      } else if (body.customersFound === 0 && body.invoicesFound === 0) {
+        setResult(
+          `Square returned nothing. Check that SQUARE_ENVIRONMENT matches the token you used (this deployment is set to "${body.environment}") — a production token with the sandbox setting, or the reverse, returns an empty list.`
+        );
+      } else if (body.problems?.length) {
+        setResult(
+          `Square had ${body.customersFound} customer(s) and ${body.invoicesFound} invoice(s), but ${body.problems.length} could not be saved: ${body.problems.join(" | ")}`
+        );
+      } else {
+        setResult(
+          `Saved ${body.customers} customer${body.customers === 1 ? "" : "s"} and ${body.invoices} invoice${body.invoices === 1 ? "" : "s"} from Square.`
+        );
+      }
     } catch (e) {
       setResult(`Failed: ${e instanceof Error ? e.message : "Unknown error"}`);
     }
