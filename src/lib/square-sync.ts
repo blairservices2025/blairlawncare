@@ -226,15 +226,20 @@ export async function applyWebhookEvent(type: string, data: unknown) {
     }
   }
 
-  await db
-    .from("square_sync_log")
-    .insert({
-      source: "webhook",
-      event_type: type,
-      customers_synced: customers,
-      invoices_synced: invoices,
-    })
-    .then(undefined, () => undefined);
+  // Square sends whatever the subscription is signed up for. Only record
+  // the ones that changed something here, so subscribing to everything
+  // doesn't bury the activity list in events this app has no use for.
+  if (customers || invoices) {
+    await db
+      .from("square_sync_log")
+      .insert({
+        source: "webhook",
+        event_type: type,
+        customers_synced: customers,
+        invoices_synced: invoices,
+      })
+      .then(undefined, () => undefined);
+  }
 
   return { customers, invoices };
 }
