@@ -40,7 +40,12 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isLogin = request.nextUrl.pathname.startsWith("/login");
+  // The magic-link landing route must be reachable without a session —
+  // that request is what creates the session in the first place.
+  const path = request.nextUrl.pathname;
+  const isLogin = path.startsWith("/login");
+  if (path.startsWith("/auth/")) return response;
+
   if (!user && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
