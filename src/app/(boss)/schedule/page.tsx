@@ -52,6 +52,8 @@ export default function SchedulePage() {
   const [weekStart, setWeekStart] = useState(mondayOf(todayISO()));
   const [shifts, setShifts] = useState<CrewShift[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
+  const [lastWeekJobs, setLastWeekJobs] = useState<ScheduledJob[]>([]);
+  const [showGhosts, setShowGhosts] = useState(true);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
@@ -74,7 +76,10 @@ export default function SchedulePage() {
   });
 
   const load = useCallback(async () => {
-    const [s, j, e, c, t] = await Promise.all([
+    const prevStart = addDays(weekStart, -7);
+    const prevEnd = addDays(weekEnd, -7);
+
+    const [s, j, e, c, t, pj] = await Promise.all([
       supabase
         .from("crew_shifts")
         .select("*, profiles(full_name)")
@@ -92,12 +97,18 @@ export default function SchedulePage() {
         .from("time_off_requests")
         .select("*, profiles(full_name)")
         .order("created_at", { ascending: false }),
+      supabase
+        .from("scheduled_jobs")
+        .select("*, customers(name, address, plan), profiles(full_name)")
+        .gte("job_date", prevStart)
+        .lte("job_date", prevEnd),
     ]);
     setShifts((s.data as CrewShift[]) ?? []);
     setJobs((j.data as ScheduledJob[]) ?? []);
     setEmployees((e.data as Profile[]) ?? []);
     setCustomers((c.data as Customer[]) ?? []);
     setTimeOff((t.data as TimeOffRequest[]) ?? []);
+    setLastWeekJobs((pj.data as ScheduledJob[]) ?? []);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
@@ -165,6 +176,32 @@ export default function SchedulePage() {
     load();
   }
 
+  /**
+   * Ghosts: what was on the board the same weekday last week, shown faded
+   * so you can see at a glance what got done and repeat it. A customer
+   * already scheduled anywhere this week doesn't need a reminder.
+   */
+  function ghostsFor(dayIndex: number): ScheduledJob[] {
+    if (!showGhosts) return [];
+    const lastWeekDay = addDays(weekStart, dayIndex - 7);
+    return lastWeekJobs.filter(
+      (j) => j.job_date === lastWeekDay && !scheduledIds.has(j.customer_id)
+    );
+  }
+
+  /** Put a ghost back on the board, on the matching day this week. */
+  async function repeatJob(j: ScheduledJob, date: string) {
+    await supabase.from("scheduled_jobs").insert({
+      customer_id: j.customer_id,
+      employee_id: j.employee_id,
+      job_date: date,
+      job_time: j.job_time,
+      service: j.service,
+      recurrence: j.recurrence,
+    });
+    load();
+  }
+
   // Palette state, as in the reference: grey = already on the board this
   // week, gold = due this week.
   const scheduledIds = new Set(jobs.map((j) => j.customer_id));
@@ -203,11 +240,22 @@ export default function SchedulePage() {
 
       {/* ---------------- Lawns ---------------- */}
       <Card title="Lawns scheduled">
-        <p className="text-[11.5px] text-ink-soft mb-2">
-          Drag a customer onto a day to schedule a mow · grey = already on this
-          week · gold = due this week · drag a mow to move it · tap a mow to
-          edit it
-        </p>
+        <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+          <p className="text-[11.5px] text-ink-soft">
+            Drag a customer onto a day to schedule a mow · grey = already on
+            this week · gold = due this week · drag a mow to move it · tap a
+            mow to edit it
+          </p>
+          <label className="flex items-center gap-1.5 text-[11.5px] text-ink-soft whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={showGhosts}
+              onChange={(e) => setShowGhosts(e.target.checked)}
+              className="accent-[var(--cut)]"
+            />
+            Show last week
+          </label>
+        </div>
 
         <div className="flex gap-2 flex-wrap mb-3">
           {customers.length === 0 && (
@@ -310,6 +358,25 @@ export default function SchedulePage() {
                       {j.profiles?.full_name ? ` · ${j.profiles.full_name}` : ""}
                     </div>
                   </div>
+                ))}
+
+                {ghostsFor(di).map((g) => (
+                  <button
+                    key={`ghost-${g.id}`}
+                    onClick={() => repeatJob(g, d)}
+                    title={`${g.customers?.name} was done this day last week — tap to schedule it again`}
+                    className="w-full text-left bg-transparent border border-dashed border-line rounded-md px-2 py-1.5 mb-1.5 text-[11px] opacity-70 hover:opacity-100 hover:border-cut transition-opacity"
+                  >
+                    <div className="text-[9.5px] uppercase tracking-[0.5px] text-ink-soft">
+                      Last week
+                    </div>
+                    <div className="font-semibold text-[11.5px] text-ink-soft">
+                      {g.customers?.name}
+                    </div>
+                    <div className="text-ink-soft">
+                      {g.service ?? "Mow"} · tap to repeat
+                    </div>
+                  </button>
                 ))}
               </div>
             );
