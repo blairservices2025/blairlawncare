@@ -306,17 +306,25 @@ export default function EmployeeClient() {
       list.map((x) => (x.id === j.id ? { ...x, status: next } : x))
     );
 
-    const { error } = await supabase
+    // Ask for the row back: if the access rules filter it out rather
+    // than rejecting it, the update reports no error and changes nothing,
+    // which looks exactly like a dead button.
+    const { data, error } = await supabase
       .from("scheduled_jobs")
       .update({ status: next })
-      .eq("id", j.id);
+      .eq("id", j.id)
+      .select("id");
 
-    if (error) {
+    if (error || !data?.length) {
       // Put it back the way it was rather than showing a false tick.
       setTodayJobs((list) =>
         list.map((x) => (x.id === j.id ? { ...x, status: j.status } : x))
       );
-      alert(`Could not update that job: ${error.message}`);
+      alert(
+        error
+          ? `Could not update that job: ${error.message}`
+          : "That didn't save — the database rules blocked it. Run supabase/09-crew-job-board.sql in the SQL Editor."
+      );
     }
   }
 

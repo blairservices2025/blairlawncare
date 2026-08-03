@@ -4,14 +4,17 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui";
+import PinPad from "@/components/PinPad";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // Crew sign in with just their email; the boss can switch to a password.
-  const [mode, setMode] = useState<"link" | "password">("link");
+  // Crew sign in with their email then their 4-digit code. The boss uses
+  // a password or an emailed link.
+  const [mode, setMode] = useState<"pin" | "link" | "password">("pin");
+  const [askingPin, setAskingPin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
@@ -19,6 +22,27 @@ function LoginForm() {
   );
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  function continueToPin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setAskingPin(true);
+  }
+
+  /** Checked server-side; returns a message to show, or null when in. */
+  async function submitPin(pin: string): Promise<string | null> {
+    const res = await fetch("/api/auth/pin-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), pin }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return body.error ?? "That didn't work. Try again.";
+
+    router.push("/");
+    router.refresh();
+    return null;
+  }
 
   async function sendLink(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +99,11 @@ function LoginForm() {
             Blair Lawn Care
           </h1>
           <p className="text-sm text-[var(--white)]/60 mt-1">
-            {mode === "link" ? "Sign in with your email" : "Sign in"}
+            {mode === "pin"
+              ? "Enter your email, then your code"
+              : mode === "link"
+                ? "Sign in with your email"
+                : "Sign in"}
           </p>
         </div>
 
@@ -106,7 +134,13 @@ function LoginForm() {
             </div>
           ) : (
             <form
-              onSubmit={mode === "link" ? sendLink : signInWithPassword}
+              onSubmit={
+                mode === "pin"
+                  ? continueToPin
+                  : mode === "link"
+                    ? sendLink
+                    : signInWithPassword
+              }
               className="space-y-4"
             >
               <div>
@@ -145,26 +179,63 @@ function LoginForm() {
                   ? mode === "link"
                     ? "Sending…"
                     : "Signing in…"
-                  : mode === "link"
-                    ? "Email me a sign-in link"
-                    : "Sign in"}
+                  : mode === "pin"
+                    ? "Continue"
+                    : mode === "link"
+                      ? "Email me a sign-in link"
+                      : "Sign in"}
               </Button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMode(mode === "link" ? "password" : "link");
-                  setError(null);
-                }}
-                className="w-full text-xs text-ink-soft hover:text-cut underline"
-              >
-                {mode === "link"
-                  ? "Use a password instead"
-                  : "Email me a link instead"}
-              </button>
+              <div className="flex flex-col gap-1.5 pt-1">
+                {mode !== "pin" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("pin");
+                      setError(null);
+                    }}
+                    className="w-full text-xs text-ink-soft hover:text-cut underline"
+                  >
+                    Use my 4-digit code
+                  </button>
+                )}
+                {mode !== "password" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("password");
+                      setError(null);
+                    }}
+                    className="w-full text-xs text-ink-soft hover:text-cut underline"
+                  >
+                    Use a password instead
+                  </button>
+                )}
+                {mode !== "link" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("link");
+                      setError(null);
+                    }}
+                    className="w-full text-xs text-ink-soft hover:text-cut underline"
+                  >
+                    Email me a link instead
+                  </button>
+                )}
+              </div>
             </form>
           )}
         </div>
+
+        {askingPin && (
+          <PinPad
+            title="Your code"
+            subtitle={email}
+            onComplete={submitPin}
+            onCancel={() => setAskingPin(false)}
+          />
+        )}
 
         <p className="text-xs text-[var(--white)]/50 text-center mt-4">
           Accounts are set up by the boss. If your email isn&apos;t recognised,
