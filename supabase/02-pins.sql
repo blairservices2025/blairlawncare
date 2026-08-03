@@ -21,7 +21,11 @@
 -- what code is typed.
 -- ============================================================
 
-create extension if not exists "pgcrypto";
+-- Supabase installs pgcrypto into the "extensions" schema. Make sure it
+-- exists, then put that schema on the search path for this script so
+-- crypt() and gen_salt() resolve for the statements below.
+create extension if not exists "pgcrypto" with schema extensions;
+set search_path = public, extensions;
 
 -- ---------- Per-employee PIN ----------
 alter table public.profiles
@@ -55,7 +59,7 @@ on conflict (key) do nothing;
 -- Set (or change) the PIN of the signed-in user.
 create or replace function public.set_my_pin(new_pin text)
 returns void
-language plpgsql security definer set search_path = public
+language plpgsql security definer set search_path = public, extensions
 as $$
 begin
   if new_pin !~ '^\d{4}$' then
@@ -73,7 +77,7 @@ $$;
 -- Set the PIN of any employee. Boss only (for helping crew out).
 create or replace function public.set_employee_pin(employee uuid, new_pin text)
 returns void
-language plpgsql security definer set search_path = public
+language plpgsql security definer set search_path = public, extensions
 as $$
 begin
   if not public.is_boss() then
@@ -91,7 +95,7 @@ $$;
 -- Does this employee have a PIN yet?
 create or replace function public.employee_has_pin(employee uuid)
 returns boolean
-language sql stable security definer set search_path = public
+language sql stable security definer set search_path = public, extensions
 as $$
   select pin_hash is not null from public.profiles where id = employee;
 $$;
@@ -99,7 +103,7 @@ $$;
 -- Check an employee's PIN. Returns true/false only.
 create or replace function public.verify_employee_pin(employee uuid, pin text)
 returns boolean
-language plpgsql stable security definer set search_path = public
+language plpgsql stable security definer set search_path = public, extensions
 as $$
 declare
   stored text;
@@ -115,7 +119,7 @@ $$;
 -- Check the boss code (2802 by default).
 create or replace function public.verify_boss_code(code text)
 returns boolean
-language plpgsql stable security definer set search_path = public
+language plpgsql stable security definer set search_path = public, extensions
 as $$
 declare
   stored text;
@@ -131,7 +135,7 @@ $$;
 -- Change the boss code. Boss only.
 create or replace function public.set_boss_code(new_code text)
 returns void
-language plpgsql security definer set search_path = public
+language plpgsql security definer set search_path = public, extensions
 as $$
 begin
   if not public.is_boss() then
