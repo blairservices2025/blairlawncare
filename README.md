@@ -11,6 +11,11 @@ A real, multi-user version of the Blair Lawn Care dashboard — built per
 
 ## What's included
 
+**Clients and yards** — a client can have several properties mowed. Each
+yard has its own address, plan, price, gate code and service history; the
+client is who gets billed and whose card is on file. Jobs are scheduled
+against a yard, so the crew see the yard name with the client underneath.
+
 **Boss dashboard** — Overview (today's schedule, crew status, revenue
 snapshot, to-dos, service flags) · Jobs (today + week ahead) · Customers
 (profiles, plan, overdue flags, card-on-file *reference*, contract upload,
@@ -62,6 +67,7 @@ row-level security rules.
    | `10-pin-login.sql` | signing in with an email and a 4-digit code |
    | `11-pin-hash-privacy.sql` | hides the code hashes from the browser |
    | `12-job-billing.sql` | prices on jobs and the link to their Square invoice |
+   | `13-yards.sql` | one client, many yards |
 3. Go to **Authentication → Users → Add user** and create **your own account
    first** (email + password, check "auto-confirm").
    ⚠️ The first account ever created automatically becomes the **boss** —

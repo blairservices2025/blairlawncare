@@ -15,6 +15,7 @@ interface BillableJob {
     square_customer_id: string | null;
     card_last4: string | null;
   } | null;
+  yards: { name: string } | null;
 }
 
 /** Square's card-on-file rate, so the cost of billing this way is visible. */
@@ -161,8 +162,13 @@ export default function BillJobsPanel() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13.5px] font-semibold">
-                      {j.customers?.name ?? "Unknown"}
+                      {j.yards?.name ?? j.customers?.name ?? "Unknown"}
                     </div>
+                    {j.yards?.name && j.customers?.name && (
+                      <div className="text-xs text-ink-soft">
+                        {j.customers.name}
+                      </div>
+                    )}
                     <div className="text-xs text-ink-soft">
                       {fmtDate(j.job_date)} · {j.service ?? "Mow"}
                       {j.customers?.card_last4

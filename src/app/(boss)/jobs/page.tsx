@@ -54,7 +54,7 @@ export default function JobsPage() {
     const [j, e] = await Promise.all([
       supabase
         .from("scheduled_jobs")
-        .select("*, customers(name, address, plan), profiles(full_name)")
+        .select("*, customers(name, address, plan), yards(name, address), profiles(full_name)")
         .gte("job_date", weekStart)
         .lte("job_date", weekEnd),
       supabase.from("profiles").select("*").eq("is_active", true).order("full_name"),
@@ -230,7 +230,7 @@ export default function JobsPage() {
                           j.status === "done" ? "line-through text-ink-soft" : ""
                         }`}
                       >
-                        {j.customers?.name}
+                        {j.yards?.name ?? j.customers?.name}
                       </div>
                       <div className="text-ink-soft truncate">
                         {j.service ?? "Mow"}
@@ -273,7 +273,7 @@ export default function JobsPage() {
       <Modal
         open={!!selected}
         onClose={() => setSelected(null)}
-        title={selected?.customers?.name ?? "Job"}
+        title={selected?.yards?.name ?? selected?.customers?.name ?? "Job"}
       >
         {selected && (
           <div className="space-y-3">

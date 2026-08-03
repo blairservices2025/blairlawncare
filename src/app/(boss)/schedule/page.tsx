@@ -17,6 +17,7 @@ import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
 import type {
   CrewShift,
   Customer,
+  Yard,
   Profile,
   ScheduledJob,
   TimeOffRequest,
@@ -35,7 +36,7 @@ const colorFor = (i: number) => CREW_COLORS[i % CREW_COLORS.length];
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type DragPayload =
-  | { kind: "customer"; id: string }
+  | { kind: "yard"; id: string }
   | { kind: "job"; id: string }
   | { kind: "employee"; id: string }
   | { kind: "shift"; id: string };
@@ -56,6 +57,7 @@ export default function SchedulePage() {
   const [showGhosts, setShowGhosts] = useState(true);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [yards, setYards] = useState<Yard[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingJob, setEditingJob] = useState<ScheduledJob | null>(null);
@@ -79,7 +81,7 @@ export default function SchedulePage() {
     const prevStart = addDays(weekStart, -7);
     const prevEnd = addDays(weekEnd, -7);
 
-    const [s, j, e, c, t, pj] = await Promise.all([
+    const [s, j, e, c, yd, t, pj] = await Promise.all([
       supabase
         .from("crew_shifts")
         .select("*, profiles(full_name)")
@@ -94,6 +96,11 @@ export default function SchedulePage() {
       supabase.from("profiles").select("*").eq("is_active", true).order("full_name"),
       supabase.from("customers").select("*").order("name"),
       supabase
+        .from("yards")
+        .select("*, customers(name, phone, card_last4)")
+        .eq("is_active", true)
+        .order("name"),
+      supabase
         .from("time_off_requests")
         .select("*, profiles(full_name)")
         .order("created_at", { ascending: false }),
@@ -107,6 +114,7 @@ export default function SchedulePage() {
     setJobs((j.data as ScheduledJob[]) ?? []);
     setEmployees((e.data as Profile[]) ?? []);
     setCustomers((c.data as Customer[]) ?? []);
+    setYards((yd.data as Yard[]) ?? []);
     setTimeOff((t.data as TimeOffRequest[]) ?? []);
     setLastWeekJobs((pj.data as ScheduledJob[]) ?? []);
     setLoading(false);
@@ -123,9 +131,12 @@ export default function SchedulePage() {
       const [zone, a, b] = target.split(":");
 
       if (zone === "day") {
-        if (payload.kind === "customer") {
+        if (payload.kind === "yard") {
+          const yard = yards.find((y) => y.id === payload.id);
+          if (!yard) return;
           await supabase.from("scheduled_jobs").insert({
-            customer_id: payload.id,
+            yard_id: yard.id,
+            customer_id: yard.customer_id,
             job_date: a,
             job_time: defaults.jobTime,
             service: defaults.service,
@@ -157,7 +168,7 @@ export default function SchedulePage() {
       load();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [defaults, load]
+    [defaults, load, yards]
   );
 
   const { startDrag, ghost, overTarget, dragging } =
@@ -193,6 +204,7 @@ export default function SchedulePage() {
   async function repeatJob(j: ScheduledJob, date: string) {
     await supabase.from("scheduled_jobs").insert({
       customer_id: j.customer_id,
+      yard_id: j.yard_id,
       employee_id: j.employee_id,
       job_date: date,
       job_time: j.job_time,
@@ -204,13 +216,15 @@ export default function SchedulePage() {
 
   // Palette state, as in the reference: grey = already on the board this
   // week, gold = due this week.
-  const scheduledIds = new Set(jobs.map((j) => j.customer_id));
-  function paletteState(c: Customer): "scheduled" | "due" | "idle" {
-    if (scheduledIds.has(c.id)) return "scheduled";
-    if (c.plan !== "weekly" && c.plan !== "biweekly") return "idle";
-    if (!c.last_service_date) return "due";
-    const cycle = c.plan === "weekly" ? 7 : 14;
-    return addDays(c.last_service_date, cycle) <= weekEnd ? "due" : "idle";
+  const scheduledIds = new Set(
+    jobs.map((j) => j.yard_id).filter(Boolean) as string[]
+  );
+  function paletteState(y: Yard): "scheduled" | "due" | "idle" {
+    if (scheduledIds.has(y.id)) return "scheduled";
+    if (y.plan !== "weekly" && y.plan !== "biweekly") return "idle";
+    if (!y.last_service_date) return "due";
+    const cycle = y.plan === "weekly" ? 7 : 14;
+    return addDays(y.last_service_date, cycle) <= weekEnd ? "due" : "idle";
   }
 
   const pendingTimeOff = timeOff.filter((t) => t.status === "pending");
@@ -258,12 +272,12 @@ export default function SchedulePage() {
         </div>
 
         <div className="flex gap-2 flex-wrap mb-3">
-          {customers.length === 0 && (
+          {yards.length === 0 && (
             <span className="text-[13px] text-ink-soft">
-              No customers yet — add some on the Customers page.
+              No yards yet — add some on the Yards page.
             </span>
           )}
-          {customers.map((c) => {
+          {yards.map((c) => {
             const state = paletteState(c);
             const style =
               state === "scheduled"
@@ -275,16 +289,16 @@ export default function SchedulePage() {
               <button
                 key={c.id}
                 onPointerDown={(e) =>
-                  startDrag({ kind: "customer", id: c.id }, c.name, e)
+                  startDrag({ kind: "yard", id: c.id }, c.name, e)
                 }
                 className={`rounded-[20px] px-3.5 py-2 text-[12.5px] font-semibold cursor-grab active:cursor-grabbing select-none touch-none ${style}`}
-                title={
+                title={`${c.customers?.name ?? ""} · ${
                   state === "scheduled"
-                    ? "Already on this week's board"
+                    ? "already on this week's board"
                     : state === "due"
-                      ? "Due this week"
+                      ? "due this week"
                       : c.plan.replace("_", "-")
-                }
+                }`}
               >
                 {c.name}
               </button>
@@ -497,7 +511,7 @@ export default function SchedulePage() {
 
       {/* ---------------- Schedule a lawn ---------------- */}
       <LawnForm
-        customers={customers}
+        yards={yards}
         employees={employees}
         defaults={defaults}
         setDefaults={setDefaults}
@@ -648,13 +662,13 @@ function ShiftAdder({
 /* ---------------- Schedule a lawn (full form) ---------------- */
 
 function LawnForm({
-  customers,
+  yards,
   employees,
   defaults,
   setDefaults,
   onAdded,
 }: {
-  customers: Customer[];
+  yards: Yard[];
   employees: Profile[];
   defaults: Defaults;
   setDefaults: (d: Defaults) => void;
@@ -662,7 +676,7 @@ function LawnForm({
 }) {
   const supabase = createClient();
   const [form, setForm] = useState({
-    customer_id: "",
+    yard_id: "",
     service: "Mow & Edge",
     job_date: todayISO(),
     job_time: "09:00",
@@ -673,10 +687,13 @@ function LawnForm({
   const [saved, setSaved] = useState(false);
 
   async function add() {
-    if (!form.customer_id) return setError("Pick a customer.");
+    if (!form.yard_id) return setError("Pick a yard.");
+    const yard = yards.find((y) => y.id === form.yard_id);
+    if (!yard) return setError("Pick a yard.");
     setError(null);
     const { error: dbErr } = await supabase.from("scheduled_jobs").insert({
-      customer_id: form.customer_id,
+      yard_id: yard.id,
+      customer_id: yard.customer_id,
       service: form.service || null,
       job_date: form.job_date,
       job_time: form.job_time || null,
@@ -695,15 +712,16 @@ function LawnForm({
     <Card title="Schedule a lawn">
       <div className="grid sm:grid-cols-3 gap-3">
         <div>
-          <Label>Customer</Label>
+          <Label>Yard</Label>
           <Select
-            value={form.customer_id}
-            onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
+            value={form.yard_id}
+            onChange={(e) => setForm({ ...form, yard_id: e.target.value })}
           >
             <option value="">Select…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+            {yards.map((y) => (
+              <option key={y.id} value={y.id}>
+                {y.name}
+                {y.customers?.name ? ` — ${y.customers.name}` : ""}
               </option>
             ))}
           </Select>

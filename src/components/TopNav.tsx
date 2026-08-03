@@ -10,7 +10,7 @@ import type { Profile } from "@/lib/types";
 const NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/jobs", label: "Jobs" },
-  { href: "/customers", label: "Customers" },
+  { href: "/customers", label: "Yards" },
   { href: "/invoices", label: "Invoices" },
   { href: "/revenue", label: "Revenue" },
   { href: "/schedule", label: "Schedule" },

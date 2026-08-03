@@ -37,7 +37,7 @@ export async function GET() {
   const { data, error } = await auth.supabase
     .from("scheduled_jobs")
     .select(
-      "id, job_date, service, price, customer_id, customers(name, square_customer_id, card_last4)"
+      "id, job_date, service, price, customer_id, customers(name, square_customer_id, card_last4), yards(name)"
     )
     .eq("status", "done")
     .is("square_invoice_id", null)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       const { data: job } = await auth.supabase
         .from("scheduled_jobs")
         .select(
-          "id, job_date, service, price, square_invoice_id, customer_id, customers(name, square_customer_id)"
+          "id, job_date, service, price, square_invoice_id, customer_id, customers(name, square_customer_id), yards(name)"
         )
         .eq("id", jobId)
         .single();
@@ -134,7 +134,11 @@ export async function POST(request: NextRequest) {
 
       const result = await createSquareInvoice({
         squareCustomerId: customer.square_customer_id,
-        description: `${job.service ?? "Lawn service"} — ${job.job_date}`,
+        description: `${job.service ?? "Lawn service"}${
+          (job.yards as unknown as { name: string } | null)?.name
+            ? ` — ${(job.yards as unknown as { name: string }).name}`
+            : ""
+        } — ${job.job_date}`,
         amountCents: Math.round(amount * 100),
         dueDate: job.job_date,
         // Derived per job, so one job failing doesn't block the rest and a

@@ -20,6 +20,7 @@ import type {
   Invoice,
   PaymentAttempt,
   ScheduledJob,
+  Yard,
 } from "@/lib/types";
 
 const emptyForm = {
@@ -39,6 +40,10 @@ const emptyForm = {
 export default function CustomersPage() {
   const supabase = createClient();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [yards, setYards] = useState<Yard[]>([]);
+  const [yardForm, setYardForm] = useState<{ open: boolean; yard: Yard | null; customerId: string }>(
+    { open: false, yard: null, customerId: "" }
+  );
   const [selected, setSelected] = useState<Customer | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
@@ -54,8 +59,15 @@ export default function CustomersPage() {
   const [addingCard, setAddingCard] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("customers").select("*").order("name");
-    setCustomers((data as Customer[]) ?? []);
+    const [cu, yd] = await Promise.all([
+      supabase.from("customers").select("*").order("name"),
+      supabase
+        .from("yards")
+        .select("*, customers(name, phone, card_last4)")
+        .order("name"),
+    ]);
+    setCustomers((cu.data as Customer[]) ?? []);
+    setYards((yd.data as Yard[]) ?? []);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -177,6 +189,47 @@ export default function CustomersPage() {
     window.open(data.signedUrl, "_blank");
   }
 
+  async function saveYard(form: {
+    id?: string;
+    customer_id: string;
+    name: string;
+    address: string;
+    plan: string;
+    price: string;
+    gate_code: string;
+    notes: string;
+    last_service_date: string;
+  }) {
+    const payload = {
+      customer_id: form.customer_id,
+      name: form.name.trim(),
+      address: form.address || null,
+      plan: form.plan,
+      price: form.price ? Number(form.price) : null,
+      gate_code: form.gate_code || null,
+      notes: form.notes || null,
+      last_service_date: form.last_service_date || null,
+    };
+    const { error } = form.id
+      ? await supabase.from("yards").update(payload).eq("id", form.id)
+      : await supabase.from("yards").insert(payload);
+    if (error) return error.message;
+    setYardForm({ open: false, yard: null, customerId: "" });
+    load();
+    return null;
+  }
+
+  async function removeYard(y: Yard) {
+    if (
+      !confirm(
+        `Delete the yard "${y.name}"? Its scheduled jobs go with it. The client stays.`
+      )
+    )
+      return;
+    await supabase.from("yards").delete().eq("id", y.id);
+    load();
+  }
+
   async function removeCustomer(c: Customer) {
     if (!confirm(`Delete ${c.name}? This also deletes their invoices and jobs.`))
       return;
@@ -190,39 +243,52 @@ export default function CustomersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Customers</h1>
-        <Button onClick={startAdd}>+ Add customer</Button>
+        <div>
+          <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">
+            Yards
+          </h1>
+          <p className="text-[13px] text-ink-soft mt-0.5">
+            {yards.length} yard{yards.length === 1 ? "" : "s"} across{" "}
+            {customers.length} client{customers.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <Button onClick={startAdd}>+ Add client</Button>
       </div>
 
       <Card>
-        {customers.length === 0 ? (
-          <Empty>No customers yet — add your first one.</Empty>
+        {yards.length === 0 ? (
+          <Empty>No yards yet — add a client and their first yard.</Empty>
         ) : (
           <ul className="divide-y divide-line">
-            {customers.map((c) => {
+            {yards.map((y) => {
               const flag =
-                c.plan === "weekly" &&
-                c.last_service_date &&
-                daysOverdue(c.last_service_date) >= 6;
+                y.plan === "weekly" &&
+                y.last_service_date &&
+                daysOverdue(y.last_service_date) >= 6;
+              const client = customers.find((c) => c.id === y.customer_id);
               return (
                 <li
-                  key={c.id}
+                  key={y.id}
                   className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-bone-dim/40 -mx-2 px-2 rounded-lg"
-                  onClick={() => openDetail(c)}
+                  onClick={() => client && openDetail(client)}
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      {c.name}
+                    <div className="text-[14px] font-semibold flex items-center gap-2">
+                      {y.name}
                       {flag && <Badge tone="serious">⚠ overdue</Badge>}
                     </div>
                     <div className="text-xs text-ink-soft truncate">
-                      {c.address ?? "No address"} · {c.phone ?? "no phone"}
+                      {y.customers?.name ?? client?.name ?? "Unknown client"}
+                      {y.address ? ` · ${y.address}` : ""}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge tone="neutral">{c.plan.replace("_", "-")}</Badge>
-                    <span className="text-xs text-ink-soft">
-                      Last: {fmtDate(c.last_service_date)}
+                    <Badge tone="neutral">{y.plan.replace("_", "-")}</Badge>
+                    {y.price != null && (
+                      <span className="text-xs font-mono">{usd(Number(y.price))}</span>
+                    )}
+                    <span className="text-xs text-ink-soft hidden sm:inline">
+                      Last: {fmtDate(y.last_service_date)}
                     </span>
                   </div>
                 </li>
@@ -326,6 +392,75 @@ export default function CustomersPage() {
             </div>
 
             <div>
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="text-sm font-semibold">Yards</h4>
+                <button
+                  onClick={() =>
+                    setYardForm({
+                      open: true,
+                      yard: null,
+                      customerId: selected.id,
+                    })
+                  }
+                  className="text-[12.5px] text-cut font-semibold"
+                >
+                  + Add a yard
+                </button>
+              </div>
+              {yards.filter((y) => y.customer_id === selected.id).length === 0 ? (
+                <p className="text-xs text-ink-soft">
+                  No yards yet for this client.
+                </p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {yards
+                    .filter((y) => y.customer_id === selected.id)
+                    .map((y) => (
+                      <li
+                        key={y.id}
+                        className="py-2 flex items-start justify-between gap-2 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold">{y.name}</div>
+                          <div className="text-xs text-ink-soft">
+                            {y.address ?? "No address"} ·{" "}
+                            {y.plan.replace("_", "-")}
+                            {y.price != null ? ` · ${usd(Number(y.price))}` : ""}
+                            {y.gate_code ? ` · gate ${y.gate_code}` : ""}
+                          </div>
+                          <div className="text-xs text-ink-soft">
+                            Last service: {fmtDate(y.last_service_date)}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            variant="secondary"
+                            onClick={() =>
+                              setYardForm({
+                                open: true,
+                                yard: y,
+                                customerId: selected.id,
+                              })
+                            }
+                            className="!py-1 !px-2 text-xs"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => removeYard(y)}
+                            className="!py-1 !px-2 text-xs"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
               <h4 className="text-sm font-semibold mb-1">Card payments</h4>
               {payments.length === 0 ? (
                 <p className="text-xs text-ink-soft">
@@ -408,6 +543,12 @@ export default function CustomersPage() {
         customerName={selected?.name ?? ""}
         description={`Blair Lawn Care — ${selected?.name ?? ""}`}
         onCharged={load}
+      />
+
+      <YardFormModal
+        state={yardForm}
+        onClose={() => setYardForm({ open: false, yard: null, customerId: "" })}
+        onSave={saveYard}
       />
 
       {/* Add/edit form */}
@@ -547,5 +688,161 @@ export default function CustomersPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+
+/* ---------------- Yard add / edit ---------------- */
+
+function YardFormModal({
+  state,
+  onClose,
+  onSave,
+}: {
+  state: { open: boolean; yard: Yard | null; customerId: string };
+  onClose: () => void;
+  onSave: (form: {
+    id?: string;
+    customer_id: string;
+    name: string;
+    address: string;
+    plan: string;
+    price: string;
+    gate_code: string;
+    notes: string;
+    last_service_date: string;
+  }) => Promise<string | null>;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    address: "",
+    plan: "weekly",
+    price: "",
+    gate_code: "",
+    notes: "",
+    last_service_date: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!state.open) return;
+    const y = state.yard;
+    setForm({
+      name: y?.name ?? "",
+      address: y?.address ?? "",
+      plan: y?.plan ?? "weekly",
+      price: y?.price != null ? String(y.price) : "",
+      gate_code: y?.gate_code ?? "",
+      notes: y?.notes ?? "",
+      last_service_date: y?.last_service_date ?? "",
+    });
+    setError(null);
+  }, [state]);
+
+  async function submit() {
+    if (!form.name.trim()) {
+      setError("Give the yard a name — it's what the crew will look for.");
+      return;
+    }
+    setBusy(true);
+    const err = await onSave({
+      id: state.yard?.id,
+      customer_id: state.customerId,
+      ...form,
+    });
+    setBusy(false);
+    if (err) setError(err);
+  }
+
+  return (
+    <Modal
+      open={state.open}
+      onClose={onClose}
+      title={state.yard ? `Edit ${state.yard.name}` : "Add a yard"}
+    >
+      <div className="space-y-3">
+        <div>
+          <Label>Yard name *</Label>
+          <Input
+            placeholder="Main house, Rental on 5th, Shop lot…"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <p className="text-xs text-ink-soft mt-1">
+            This is the heading the crew see on their list.
+          </p>
+        </div>
+        <div>
+          <Label>Address</Label>
+          <Input
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Plan</Label>
+            <Select
+              value={form.plan}
+              onChange={(e) => setForm({ ...form, plan: e.target.value })}
+            >
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="one_time">One-time</option>
+            </Select>
+          </div>
+          <div>
+            <Label>Price per service ($)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Gate code</Label>
+            <Input
+              value={form.gate_code}
+              onChange={(e) => setForm({ ...form, gate_code: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Last service</Label>
+            <Input
+              type="date"
+              value={form.last_service_date}
+              onChange={(e) =>
+                setForm({ ...form, last_service_date: e.target.value })
+              }
+            />
+          </div>
+        </div>
+        <div>
+          <Label>Notes for the crew</Label>
+          <Input
+            placeholder="Dog in the back, skip the side strip…"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        </div>
+        {error && (
+          <p className="text-sm text-[var(--status-overdue-fg)]">{error}</p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Saving…" : state.yard ? "Save yard" : "Add yard"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -69,6 +69,7 @@ export interface ScheduledJob {
   job_date: string;
   job_time?: string | null;
   service?: string | null;
+  yard_id?: string | null;
   price?: number | null;
   square_invoice_id?: string | null;
   billed_at?: string | null;
@@ -78,6 +79,7 @@ export interface ScheduledJob {
   note: string | null;
   created_at: string;
   customers?: { name: string; address: string | null; plan: ServicePlan } | null;
+  yards?: { name: string; address?: string | null } | null;
   profiles?: { full_name: string } | null;
 }
 
@@ -148,6 +150,9 @@ export interface JobBoardRow {
   recurrence: RecurrenceType;
   customer_name: string | null;
   customer_address: string | null;
+  yard_name?: string | null;
+  gate_code?: string | null;
+  client_name?: string | null;
   assigned_to: string | null;
 }
 
@@ -163,4 +168,20 @@ export interface PaymentAttempt {
   square_payment_id: string | null;
   error: string | null;
   created_at: string;
+}
+
+/** A property that gets mowed. A client can have several. */
+export interface Yard {
+  id: string;
+  customer_id: string;
+  name: string;
+  address: string | null;
+  plan: ServicePlan;
+  price: number | null;
+  last_service_date: string | null;
+  notes: string | null;
+  gate_code: string | null;
+  is_active: boolean;
+  created_at: string;
+  customers?: { name: string; phone: string | null; card_last4: string | null } | null;
 }

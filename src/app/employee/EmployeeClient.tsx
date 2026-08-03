@@ -513,12 +513,18 @@ export default function EmployeeClient() {
                       <div
                         className={`text-[13.5px] font-semibold ${done ? "line-through text-ink-soft" : ""}`}
                       >
-                        {j.customer_name ?? "Unknown"}
+                        {j.yard_name ?? j.customer_name ?? "Unknown"}
                       </div>
+                      {j.client_name && (
+                        <div className="text-xs text-ink-soft">
+                          {j.client_name}
+                        </div>
+                      )}
                       <div className="text-xs text-ink-soft">
                         {j.job_time ? `${fmtClock(j.job_time)} · ` : ""}
                         {j.service ?? "Mow"}
                         {j.assigned_to ? ` · ${j.assigned_to}` : " · anyone"}
+                        {j.gate_code ? ` · gate ${j.gate_code}` : ""}
                       </div>
                       {j.customer_address && (
                         <button
