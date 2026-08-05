@@ -185,3 +185,28 @@ export interface Yard {
   created_at: string;
   customers?: { name: string; phone: string | null; card_last4: string | null } | null;
 }
+
+export type InventoryCategory =
+  | "equipment"
+  | "supplies"
+  | "parts"
+  | "fuel"
+  | "chemicals"
+  | "other";
+
+/** Something the business keeps on hand — a supply or a machine. */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: InventoryCategory;
+  quantity: number;
+  unit: string;
+  low_stock_at: number | null;
+  unit_cost: number | null;
+  location: string | null;
+  notes: string | null;
+  service_due: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

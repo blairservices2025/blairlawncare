@@ -72,6 +72,8 @@ row-level security rules.
    | `12-job-billing.sql` | prices on jobs and the link to their Square invoice |
    | `13-yards.sql` | one client, many yards |
    | `14-yard-autocreate.sql` | gives every new client a first yard |
+   | `15-realtime.sql` | live updates for to-dos and time off |
+   | `16-inventory.sql` | the inventory tab |
 3. Go to **Authentication → Users → Add user** and create **your own account
    first** (email + password, check "auto-confirm").
    ⚠️ The first account ever created automatically becomes the **boss** —
