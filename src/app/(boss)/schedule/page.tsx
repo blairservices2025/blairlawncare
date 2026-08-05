@@ -13,6 +13,7 @@ import {
   Select,
 } from "@/components/ui";
 import { useDragDrop } from "@/lib/useDragDrop";
+import { useLiveRefresh } from "@/lib/useLiveRefresh";
 import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
 import type {
   CrewShift,
@@ -124,6 +125,14 @@ export default function SchedulePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A request sent from the field, or a yard ticked off, shows up here
+  // without anyone refreshing.
+  useLiveRefresh(
+    "schedule-live",
+    ["time_off_requests", "scheduled_jobs", "crew_shifts"],
+    load
+  );
 
   // Lawn cells are "day:<date>"; crew cells are "cell:<employeeId>:<date>".
   const handleDrop = useCallback(

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useLiveRefresh } from "@/lib/useLiveRefresh";
 import {
   Badge,
   Button,
@@ -13,6 +14,8 @@ import {
   StatTile,
 } from "@/components/ui";
 import {
+  fmtClock,
+  fmtDate,
   fmtTime,
   todayISO,
   usd,
@@ -24,6 +27,7 @@ import type {
   Profile,
   ScheduledJob,
   TimeClockEntry,
+  TimeOffRequest,
   Todo,
 } from "@/lib/types";
 
@@ -35,13 +39,14 @@ export default function OverviewPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [employees, setEmployees] = useState<Profile[]>([]);
+  const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [newTodo, setNewTodo] = useState("");
   const [todoFor, setTodoFor] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const today = todayISO();
-    const [j, c, i, cu, t, e] = await Promise.all([
+    const [j, c, i, cu, t, e, to] = await Promise.all([
       supabase
         .from("scheduled_jobs")
         .select("*, customers(name, address, plan), profiles(full_name)")
@@ -59,6 +64,11 @@ export default function OverviewPage() {
         .order("created_at", { ascending: false })
         .limit(20),
       supabase.from("profiles").select("*").eq("is_active", true).order("full_name"),
+      supabase
+        .from("time_off_requests")
+        .select("*, profiles(full_name)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
     ]);
     setJobs((j.data as ScheduledJob[]) ?? []);
     setClockedIn((c.data as TimeClockEntry[]) ?? []);
@@ -66,6 +76,7 @@ export default function OverviewPage() {
     setCustomers((cu.data as Customer[]) ?? []);
     setTodos((t.data as Todo[]) ?? []);
     setEmployees((e.data as Profile[]) ?? []);
+    setTimeOff((to.data as TimeOffRequest[]) ?? []);
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -73,6 +84,18 @@ export default function OverviewPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Requests and clock-ins arrive while this page sits open.
+  useLiveRefresh(
+    "overview-live",
+    ["time_off_requests", "time_clock_entries", "scheduled_jobs", "todos"],
+    load
+  );
+
+  async function reviewTimeOff(id: string, status: "approved" | "denied") {
+    await supabase.from("time_off_requests").update({ status }).eq("id", id);
+    load();
+  }
 
   async function addTodo() {
     if (!newTodo.trim()) return;
@@ -85,13 +108,26 @@ export default function OverviewPage() {
   }
 
   async function toggleTodo(t: Todo) {
-    await supabase.from("todos").update({ done: !t.done }).eq("id", t.id);
-    load();
+    // Flip it straight away; put it back only if the write fails.
+    setTodos((list) =>
+      list.map((x) => (x.id === t.id ? { ...x, done: !t.done } : x))
+    );
+    const { error } = await supabase
+      .from("todos")
+      .update({ done: !t.done })
+      .eq("id", t.id);
+    if (error) {
+      setTodos((list) =>
+        list.map((x) => (x.id === t.id ? { ...x, done: t.done } : x))
+      );
+    }
   }
 
   async function deleteTodo(id: string) {
-    await supabase.from("todos").delete().eq("id", id);
-    load();
+    const previous = todos;
+    setTodos((list) => list.filter((x) => x.id !== id));
+    const { error } = await supabase.from("todos").delete().eq("id", id);
+    if (error) setTodos(previous);
   }
 
   const outstanding = invoices
@@ -117,6 +153,54 @@ export default function OverviewPage() {
   return (
     <div className="space-y-4">
       <h1 className="display text-[26px] font-semibold tracking-[-0.2px]">Overview</h1>
+
+      {timeOff.length > 0 && (
+        <Card
+          title={`Time off to review (${timeOff.length})`}
+          className="border-gold"
+        >
+          <ul className="divide-y divide-line">
+            {timeOff.map((t) => (
+              <li
+                key={t.id}
+                className="py-2 flex items-center justify-between gap-2 flex-wrap"
+              >
+                <div>
+                  <div className="text-[13.5px] font-semibold">
+                    {t.profiles?.full_name}
+                  </div>
+                  <div className="text-xs text-ink-soft">
+                    {fmtDate(t.start_date)}
+                    {t.start_date !== t.end_date
+                      ? ` → ${fmtDate(t.end_date)}`
+                      : ""}
+                    {" · "}
+                    {t.start_time && t.end_time
+                      ? `${fmtClock(t.start_time)} – ${fmtClock(t.end_time)}`
+                      : "All day"}
+                    {t.reason ? ` · ${t.reason}` : ""}
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    onClick={() => reviewTimeOff(t.id, "approved")}
+                    className="!py-1 !px-2.5 text-xs"
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => reviewTimeOff(t.id, "denied")}
+                    className="!py-1 !px-2.5 text-xs"
+                  >
+                    Deny
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatTile label="Jobs today" value={String(jobs.length)} />

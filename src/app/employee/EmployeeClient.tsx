@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PinPad from "@/components/PinPad";
 import ReceiptCapture from "@/components/ReceiptCapture";
+import Elapsed from "@/components/Elapsed";
+import { useLiveRefresh } from "@/lib/useLiveRefresh";
 import {
   Badge,
   Button,
@@ -36,23 +38,6 @@ import type {
   Todo,
 } from "@/lib/types";
 
-function useTicker(active: boolean) {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [active]);
-}
-
-function elapsed(fromIso: string) {
-  const s = Math.floor((Date.now() - new Date(fromIso).getTime()) / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-}
-
 export default function EmployeeClient() {
   const supabase = createClient();
   const router = useRouter();
@@ -82,8 +67,6 @@ export default function EmployeeClient() {
     allDay: true,
   });
   const [loading, setLoading] = useState(true);
-
-  useTicker(!!openClock || !!openTimer);
 
   const load = useCallback(async () => {
     const {
@@ -187,22 +170,13 @@ export default function EmployeeClient() {
     load();
   }, [load]);
 
-  // A yard ticked off on someone else's phone shows up here without
-  // anyone refreshing.
-  useEffect(() => {
-    const channel = supabase
-      .channel("crew-job-board")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "scheduled_jobs" },
-        () => load()
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load]);
+  // Anything the boss sends through — a new to-do, a yard ticked off by
+  // someone else, a time-off request answered — lands here on its own.
+  useLiveRefresh(
+    "crew-live",
+    ["scheduled_jobs", "todos", "time_off_requests"],
+    load
+  );
 
   async function clockIn() {
     if (!me) return;
@@ -240,8 +214,19 @@ export default function EmployeeClient() {
   }
 
   async function toggleTodo(t: Todo) {
-    await supabase.from("todos").update({ done: !t.done }).eq("id", t.id);
-    load();
+    // Flip it straight away; put it back only if the write fails.
+    setTodos((list) =>
+      list.map((x) => (x.id === t.id ? { ...x, done: !t.done } : x))
+    );
+    const { error } = await supabase
+      .from("todos")
+      .update({ done: !t.done })
+      .eq("id", t.id);
+    if (error) {
+      setTodos((list) =>
+        list.map((x) => (x.id === t.id ? { ...x, done: t.done } : x))
+      );
+    }
   }
 
   const [toError, setToError] = useState<string | null>(null);
@@ -418,7 +403,7 @@ export default function EmployeeClient() {
                   ● On the clock since {fmtTime(openClock.clock_in)}
                 </div>
                 <div className="text-4xl font-bold tabular-nums my-3">
-                  {elapsed(openClock.clock_in)}
+                  <Elapsed from={openClock.clock_in} />
                 </div>
                 <Button variant="danger" onClick={clockOut} className="w-full !py-3">
                   Clock out
@@ -583,7 +568,7 @@ export default function EmployeeClient() {
             <div className="text-center">
               <div className="text-sm font-medium">{openTimer.job_name}</div>
               <div className="text-3xl font-bold tabular-nums my-2">
-                {elapsed(openTimer.started_at)}
+                <Elapsed from={openTimer.started_at} />
               </div>
               <Button variant="danger" onClick={stopTimer} className="w-full">
                 Stop timer

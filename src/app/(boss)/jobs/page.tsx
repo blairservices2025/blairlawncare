@@ -14,6 +14,7 @@ import {
   StatTile,
 } from "@/components/ui";
 import BillJobsPanel from "@/components/BillJobsPanel";
+import { useLiveRefresh } from "@/lib/useLiveRefresh";
 import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
 import type { Profile, ScheduledJob } from "@/lib/types";
 
@@ -70,20 +71,7 @@ export default function JobsPage() {
   }, [load]);
 
   // A yard ticked off in the field shows here without a refresh.
-  useEffect(() => {
-    const channel = supabase
-      .channel("jobs-calendar")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "scheduled_jobs" },
-        () => load()
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load]);
+  useLiveRefresh("jobs-calendar", ["scheduled_jobs"], load);
 
   async function setStatus(id: string, status: string) {
     await supabase.from("scheduled_jobs").update({ status }).eq("id", id);
