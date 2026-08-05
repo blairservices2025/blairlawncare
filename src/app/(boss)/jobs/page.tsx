@@ -71,7 +71,7 @@ export default function JobsPage() {
   }, [load]);
 
   // A yard ticked off in the field shows here without a refresh.
-  useLiveRefresh("jobs-calendar", ["scheduled_jobs"], load);
+  useLiveRefresh("jobs-calendar", { scheduled_jobs: load });
 
   async function setStatus(id: string, status: string) {
     await supabase.from("scheduled_jobs").update({ status }).eq("id", id);

@@ -4,37 +4,42 @@ import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Reload when any of these tables change, but at most once every
- * `waitMs`.
+ * Subscribe to table changes and refresh only what changed.
  *
- * Without the wait, a burst of changes — importing a client list,
- * scheduling a week of work, a crew member ticking off five yards in a
- * row — fires one full page reload per row. Each of those reloads is
- * several queries, so the page spends its time re-fetching instead of
- * responding. Collapsing a burst into a single refresh keeps it feeling
- * immediate without the pile-up.
+ * Each table gets its own refresh function rather than everything
+ * sharing one. A new to-do used to trigger a reload of the whole page —
+ * shifts, jobs, timers, time off, the lot — so the wait to see it was
+ * the sum of every query on the page rather than the one that mattered.
+ *
+ * Each table's refreshes are also collapsed: a burst of changes (a week
+ * scheduled at once, five yards ticked off in a row) fires one refresh
+ * rather than one per row. The wait is short enough to still read as
+ * immediate, and it keeps a burst from queueing up behind itself.
  */
 export function useLiveRefresh(
   channelName: string,
-  tables: string[],
-  reload: () => void,
-  waitMs = 250
+  handlers: Record<string, () => void>,
+  waitMs = 120
 ) {
-  const reloadRef = useRef(reload);
-  reloadRef.current = reload;
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
-  const tableKey = tables.join(",");
+  const tableKey = Object.keys(handlers).sort().join(",");
 
   useEffect(() => {
     const supabase = createClient();
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
-    const schedule = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        reloadRef.current();
-      }, waitMs);
+    const schedule = (table: string) => {
+      const existing = timers.get(table);
+      if (existing) clearTimeout(existing);
+      timers.set(
+        table,
+        setTimeout(() => {
+          timers.delete(table);
+          handlersRef.current[table]?.();
+        }, waitMs)
+      );
     };
 
     let channel = supabase.channel(channelName);
@@ -42,13 +47,14 @@ export function useLiveRefresh(
       channel = channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table },
-        schedule
+        () => schedule(table)
       );
     }
     channel.subscribe();
 
     return () => {
-      if (timer) clearTimeout(timer);
+      timers.forEach(clearTimeout);
+      timers.clear();
       supabase.removeChannel(channel);
     };
   }, [channelName, tableKey, waitMs]);

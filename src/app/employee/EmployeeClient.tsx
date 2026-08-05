@@ -170,13 +170,47 @@ export default function EmployeeClient() {
     load();
   }, [load]);
 
+  /* Each of these fetches only its own slice, so a change shows up in
+     one query rather than reloading the entire page. */
+  const refreshTodos = useCallback(async () => {
+    const { data } = await supabase
+      .from("todos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(15);
+    setTodos((data as Todo[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshBoard = useCallback(async () => {
+    const { data } = await supabase
+      .from("job_board")
+      .select("*")
+      .eq("job_date", todayISO())
+      .order("job_time", { nullsFirst: false });
+    setTodayJobs((data as JobBoardRow[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshTimeOff = useCallback(async () => {
+    if (!viewingId) return;
+    const { data } = await supabase
+      .from("time_off_requests")
+      .select("*")
+      .eq("employee_id", viewingId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    setTimeOff((data as TimeOffRequest[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewingId]);
+
   // Anything the boss sends through — a new to-do, a yard ticked off by
   // someone else, a time-off request answered — lands here on its own.
-  useLiveRefresh(
-    "crew-live",
-    ["scheduled_jobs", "todos", "time_off_requests"],
-    load
-  );
+  useLiveRefresh("crew-live", {
+    todos: refreshTodos,
+    scheduled_jobs: refreshBoard,
+    time_off_requests: refreshTimeOff,
+  });
 
   async function clockIn() {
     if (!me) return;

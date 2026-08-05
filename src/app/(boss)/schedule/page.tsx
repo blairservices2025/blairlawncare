@@ -128,11 +128,11 @@ export default function SchedulePage() {
 
   // A request sent from the field, or a yard ticked off, shows up here
   // without anyone refreshing.
-  useLiveRefresh(
-    "schedule-live",
-    ["time_off_requests", "scheduled_jobs", "crew_shifts"],
-    load
-  );
+  useLiveRefresh("schedule-live", {
+    time_off_requests: load,
+    scheduled_jobs: load,
+    crew_shifts: load,
+  });
 
   // Lawn cells are "day:<date>"; crew cells are "cell:<employeeId>:<date>".
   const handleDrop = useCallback(

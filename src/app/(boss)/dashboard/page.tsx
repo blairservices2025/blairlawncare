@@ -85,26 +85,75 @@ export default function OverviewPage() {
     load();
   }, [load]);
 
+  const refreshTimeOff = useCallback(async () => {
+    const { data } = await supabase
+      .from("time_off_requests")
+      .select("*, profiles(full_name)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    setTimeOff((data as TimeOffRequest[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshTodos = useCallback(async () => {
+    const { data } = await supabase
+      .from("todos")
+      .select("*, profiles(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setTodos((data as Todo[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshClock = useCallback(async () => {
+    const { data } = await supabase
+      .from("time_clock_entries")
+      .select("*, profiles(full_name)")
+      .is("clock_out", null);
+    setClockedIn((data as TimeClockEntry[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshJobs = useCallback(async () => {
+    const { data } = await supabase
+      .from("scheduled_jobs")
+      .select("*, customers(name, address, plan), profiles(full_name)")
+      .eq("job_date", todayISO())
+      .order("created_at");
+    setJobs((data as ScheduledJob[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Requests and clock-ins arrive while this page sits open.
-  useLiveRefresh(
-    "overview-live",
-    ["time_off_requests", "time_clock_entries", "scheduled_jobs", "todos"],
-    load
-  );
+  useLiveRefresh("overview-live", {
+    time_off_requests: refreshTimeOff,
+    time_clock_entries: refreshClock,
+    scheduled_jobs: refreshJobs,
+    todos: refreshTodos,
+  });
 
   async function reviewTimeOff(id: string, status: "approved" | "denied") {
-    await supabase.from("time_off_requests").update({ status }).eq("id", id);
-    load();
+    setTimeOff((list) => list.filter((t) => t.id !== id));
+    const { error } = await supabase
+      .from("time_off_requests")
+      .update({ status })
+      .eq("id", id);
+    if (error) refreshTimeOff();
   }
 
   async function addTodo() {
-    if (!newTodo.trim()) return;
-    await supabase.from("todos").insert({
-      text: newTodo.trim(),
-      employee_id: todoFor || null,
-    });
+    const text = newTodo.trim();
+    if (!text) return;
     setNewTodo("");
-    load();
+    const { error } = await supabase
+      .from("todos")
+      .insert({ text, employee_id: todoFor || null });
+    if (error) {
+      setNewTodo(text);
+      alert(`Could not add that: ${error.message}`);
+      return;
+    }
+    refreshTodos();
   }
 
   async function toggleTodo(t: Todo) {
