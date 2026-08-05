@@ -74,6 +74,7 @@ row-level security rules.
    | `14-yard-autocreate.sql` | gives every new client a first yard |
    | `15-realtime.sql` | live updates for to-dos and time off |
    | `16-inventory.sql` | the inventory tab |
+   | `17-yard-list-scheduled-only.sql` | closes the yard list to anyone not working that day |
 3. Go to **Authentication → Users → Add user** and create **your own account
    first** (email + password, check "auto-confirm").
    ⚠️ The first account ever created automatically becomes the **boss** —

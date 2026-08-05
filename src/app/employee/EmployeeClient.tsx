@@ -56,6 +56,7 @@ export default function EmployeeClient() {
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [todayJobs, setTodayJobs] = useState<JobBoardRow[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [workingToday, setWorkingToday] = useState(true);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [timeOff, setTimeOff] = useState<TimeOffRequest[]>([]);
   const [jobName, setJobName] = useState("");
@@ -154,6 +155,13 @@ export default function EmployeeClient() {
     setTodos((td.data as Todo[]) ?? []);
     setTimeOff((to.data as TimeOffRequest[]) ?? []);
     setTodayJobs((yl.data as JobBoardRow[]) ?? []);
+
+    // The board is closed to anyone not on the schedule, so ask whether
+    // they are — otherwise an empty list looks like a fault.
+    const { data: working } = await supabase.rpc("is_working_on", {
+      day: todayISO(),
+    });
+    setWorkingToday(Boolean(working));
 
     // Whether a code is set — asked for rather than read off the profile,
     // since the hash itself is not exposed to the browser.
@@ -506,10 +514,16 @@ export default function EmployeeClient() {
           }
         >
           <p className="text-[12px] text-ink-soft mb-3">
-            Everything on today&apos;s route. Tick one off and it updates for
-            the whole crew.
+            {workingToday
+              ? "Everything on today's route. Tick one off and it updates for the whole crew."
+              : "Today's route is only visible to whoever is working."}
           </p>
-          {todayJobs.length === 0 ? (
+          {!workingToday ? (
+            <Empty>
+              You&apos;re not on the schedule today, so the route is closed.
+              It opens on days you&apos;re working.
+            </Empty>
+          ) : todayJobs.length === 0 ? (
             <Empty>No yards scheduled for today.</Empty>
           ) : (
             <ul className="divide-y divide-line">
