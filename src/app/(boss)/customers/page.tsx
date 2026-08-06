@@ -15,6 +15,7 @@ import {
 import ChargeCardModal from "@/components/ChargeCardModal";
 import AddCardModal from "@/components/AddCardModal";
 import { daysOverdue, fmtDate, usd } from "@/lib/format";
+import { escapeStorageKey, fileContentType, safeStorageName } from "@/lib/storage";
 import type {
   Customer,
   Invoice,
@@ -140,10 +141,15 @@ export default function CustomersPage() {
 
     let contract_file_url: string | undefined;
     if (contractFile) {
-      const path = `${crypto.randomUUID()}-${contractFile.name}`;
+      const path = `${crypto.randomUUID()}-${safeStorageName(contractFile.name)}`;
+      // The bytes rather than the File itself, so the type below is the one
+      // that gets stored — handed a File, the client lets the browser decide,
+      // and some of them say nothing at all.
       const { error: upErr } = await supabase.storage
         .from("contracts")
-        .upload(path, contractFile);
+        .upload(path, await contractFile.arrayBuffer(), {
+          contentType: fileContentType(contractFile),
+        });
       if (upErr) {
         setError(`Contract upload failed: ${upErr.message}`);
         setBusy(false);
@@ -182,11 +188,33 @@ export default function CustomersPage() {
   }
 
   async function viewContract(path: string) {
-    const { data, error } = await supabase.storage
+    // A signed link is the cheap way in, but the client escapes it with
+    // encodeURI, which leaves # and ? alone — so a contract filed under its
+    // original name may sign to a link that points nowhere.
+    if (!/[#?]/.test(path)) {
+      const { data } = await supabase.storage
+        .from("contracts")
+        .createSignedUrl(path, 300);
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+        return;
+      }
+    }
+
+    // Otherwise fetch the file itself, escaping the key by hand so those
+    // characters survive. Needs no link, so it also outlives an expired one.
+    const { data: blob, error } = await supabase.storage
       .from("contracts")
-      .createSignedUrl(path, 300);
-    if (error || !data) return alert("Could not open contract.");
-    window.open(data.signedUrl, "_blank");
+      .download(escapeStorageKey(path));
+    if (error || !blob) {
+      return alert(`Could not open contract: ${error?.message ?? "unknown error"}`);
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    window.open(objectUrl, "_blank");
+    // The new tab holds its own copy once it has loaded; without this the
+    // blob would sit in memory until the page is closed.
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
   }
 
   async function saveYard(form: {

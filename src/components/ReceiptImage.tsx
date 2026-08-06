@@ -2,16 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const EXT_TYPES: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
-  heic: "image/heic",
-  heif: "image/heif",
-};
+import { EXT_TYPES, escapeStorageKey } from "@/lib/storage";
 
 /**
  * A receipt photo out of the private storage bucket.
@@ -72,17 +63,12 @@ export default function ReceiptImage({
     }
     triedFallback.current = true;
 
-    // A # or ? in the stored name breaks the fetch as surely as it breaks
-    // the signed link — everything after it is read as a fragment or a query
-    // string. Nothing here can reach that file, so say what's wrong with it
-    // rather than failing vaguely.
-    if (/[#?]/.test(path)) {
-      setSrc(undefined);
-      setProblem("This photo's file name breaks its link. Upload it again.");
-      return;
-    }
-
-    const { data, error } = await supabase.storage.from("receipts").download(path);
+    // Escaped by hand: a # or ? in the stored name would otherwise end the
+    // path early here just as it does in the signed link, and older photos
+    // still carry whatever name the phone gave them.
+    const { data, error } = await supabase.storage
+      .from("receipts")
+      .download(escapeStorageKey(path));
     if (error || !data) {
       setSrc(undefined);
       setProblem(error?.message ?? "The photo couldn't be fetched.");

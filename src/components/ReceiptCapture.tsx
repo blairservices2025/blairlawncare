@@ -3,47 +3,7 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Card, Input, Label } from "@/components/ui";
-
-const EXT_TYPES: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
-  heic: "image/heic",
-  heif: "image/heif",
-  pdf: "application/pdf",
-};
-
-/**
- * A file name safe to use as a storage key.
- *
- * The key ends up inside a URL when the photo is fetched back, and the
- * helper that builds that URL escapes with encodeURI — which leaves #, ?,
- * & and + exactly as they are. A receipt saved as "Lowes #4.jpg" therefore
- * signs to a link pointing at the wrong object, or to one whose token has
- * been swallowed by the query string. A random ID already makes the key
- * unique, so the name is only here to stay readable in the bucket.
- */
-function safeName(name: string) {
-  const dot = name.lastIndexOf(".");
-  const stem = (dot > 0 ? name.slice(0, dot) : name)
-    .replace(/[^a-zA-Z0-9._-]+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "")
-    .slice(0, 60);
-  const ext = (dot > 0 ? name.slice(dot + 1) : "")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toLowerCase()
-    .slice(0, 8);
-  return ext ? `${stem || "receipt"}.${ext}` : stem || "receipt";
-}
-
-/** What the file actually is, falling back to the extension. */
-function imageType(file: File) {
-  if (file.type) return file.type;
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return EXT_TYPES[ext] ?? "application/octet-stream";
-}
+import { fileContentType, safeStorageName } from "@/lib/storage";
 
 /**
  * Take a photo (or pick an existing one) and file it in the receipt log.
@@ -91,14 +51,14 @@ export default function ReceiptCapture({
     setBusy(true);
     setStatus("Uploading…");
 
-    const path = `${uploaderId}/${crypto.randomUUID()}-${safeName(file.name)}`;
+    const path = `${uploaderId}/${crypto.randomUUID()}-${safeStorageName(file.name)}`;
 
     // Upload the bytes rather than the File itself. Handed a File, the
     // Supabase client posts it as form data and lets the browser decide the
     // type — which is an empty string on some phone pickers, and gets stored
     // as a non-image. An ArrayBuffer takes the path where contentType is
     // actually sent, so the photo is always filed as a photo.
-    const contentType = imageType(file);
+    const contentType = fileContentType(file);
     const { error: upErr } = await supabase.storage
       .from("receipts")
       .upload(path, await file.arrayBuffer(), { contentType });
