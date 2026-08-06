@@ -18,7 +18,7 @@
     </clipPath>
   </defs>
 
-  <rect width="512" height="512" rx="96" ry="96" fill="#f6f3ea" />
+  <rect width="512" height="512" fill="#f6f3ea" />
 
   <!-- Tall peak, behind and to the right. -->
   <path d="M190 379 L315 133 L440 379 Z" fill="#1e3a2e" />

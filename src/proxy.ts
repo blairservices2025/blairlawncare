@@ -51,6 +51,12 @@ export async function proxy(request: NextRequest) {
   // their own errors.
   if (path.startsWith("/auth/") || path.startsWith("/api/")) return response;
 
+  // The phone fetches the manifest when someone pins the app to their home
+  // screen, and it does that without the session cookie. Gating it would
+  // hand back the login page's HTML, and the icon and name would quietly
+  // fall back to a screenshot of the page. There's nothing private in it.
+  if (path === "/manifest.webmanifest") return response;
+
   if (!user && !isLogin) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

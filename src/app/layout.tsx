@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -23,6 +23,18 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Blair Lawn Care",
   description: "Blair Lawn Care operations dashboard",
+  // iOS ignores the web manifest when you add a site to the home screen and
+  // reads these tags instead, so the name and icon have to be stated twice.
+  appleWebApp: {
+    capable: true,
+    title: "Blair Lawn",
+    // Dark bar with light text, to carry on from the header underneath it.
+    statusBarStyle: "black",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1e3a2e",
 };
 
 export default function RootLayout({
