@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import LogoMark from "./LogoMark";
 
 const TICK_MS = 1000;
 const SAVE_EVERY_S = 30;
@@ -83,7 +84,10 @@ export default function ActiveTimeFooter() {
             {todayS === null ? "—" : hms(todayS)}
           </strong>
         </span>
-        <span className="text-ink-soft/70">🌱 Blair Lawn Care</span>
+        <span className="text-ink-soft/70 flex items-center gap-1.5">
+          <LogoMark className="w-4 h-4 rounded-sm" />
+          Blair Lawn Care
+        </span>
       </div>
     </footer>
   );

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui";
 import PinPad from "@/components/PinPad";
+import LogoMark from "@/components/LogoMark";
 
 function LoginForm() {
   const router = useRouter();
@@ -112,9 +113,7 @@ function LoginForm() {
     <main className="min-h-screen flex items-center justify-center mow-stripes p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-cut mx-auto mb-3 flex items-center justify-center text-2xl">
-            🌱
-          </div>
+          <LogoMark className="w-12 h-12 rounded-xl mx-auto mb-3" />
           <h1 className="display text-[28px] font-semibold text-[var(--white)]">
             Blair Lawn Care
           </h1>

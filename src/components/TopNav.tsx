@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PinPad from "./PinPad";
+import LogoMark from "./LogoMark";
 import type { Profile } from "@/lib/types";
 
 const NAV = [
@@ -75,9 +76,7 @@ export default function TopNav({
           {/* Title row */}
           <div className="flex items-center justify-between py-3 gap-4">
             <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-              <span className="w-[26px] h-[26px] rounded-md bg-cut flex items-center justify-center text-sm">
-                🌱
-              </span>
+              <LogoMark className="w-[26px] h-[26px] rounded-md shrink-0" />
               <span className="leading-[1.1]">
                 <span className="display block font-semibold text-[15.5px] tracking-[0.1px] whitespace-nowrap">
                   Blair Lawn Care

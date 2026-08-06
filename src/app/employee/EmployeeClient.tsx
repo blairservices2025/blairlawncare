@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import PinPad from "@/components/PinPad";
 import ReceiptCapture from "@/components/ReceiptCapture";
 import Elapsed from "@/components/Elapsed";
+import LogoMark from "@/components/LogoMark";
 import { useLiveRefresh } from "@/lib/useLiveRefresh";
 import {
   Badge,
@@ -415,11 +416,16 @@ export default function EmployeeClient() {
   return (
     <main className="min-h-screen bg-bone">
       <header className="mow-stripes text-[var(--bone)] px-4 py-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="display font-semibold text-[15.5px]">🌱 Blair Lawn Care</div>
-          <div className="text-xs text-[var(--white)]/60 truncate">
-            {me?.full_name} · employee view
-            {viewingId !== viewer?.id ? " (opened by the boss)" : ""}
+        <div className="min-w-0 flex items-center gap-2.5">
+          <LogoMark className="w-[26px] h-[26px] rounded-md shrink-0" />
+          <div className="min-w-0">
+            <div className="display font-semibold text-[15.5px]">
+              Blair Lawn Care
+            </div>
+            <div className="text-xs text-[var(--white)]/60 truncate">
+              {me?.full_name} · employee view
+              {viewingId !== viewer?.id ? " (opened by the boss)" : ""}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
