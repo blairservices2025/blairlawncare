@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, Empty, Label, Select, StatTile } from "@/components/ui";
 import ReceiptCapture from "@/components/ReceiptCapture";
+import ReceiptImage from "@/components/ReceiptImage";
 import { fmtDate, usd } from "@/lib/format";
 
 import type { Receipt } from "@/lib/types";
@@ -33,16 +34,25 @@ export default function ReceiptsPage() {
       .select("*, profiles(full_name)")
       .order("created_at", { ascending: false });
     const rows = (data as ReceiptWithUrl[]) ?? [];
-    // Signed URLs (bucket is private)
+    // The bucket is private, so each photo needs a signed link. Two receipts
+    // can share a file_path only by accident, but the results are matched
+    // back by path rather than by position: if the signing call ever skips
+    // or reorders an entry, lining them up by index would quietly hang the
+    // wrong photo on the wrong receipt.
     if (rows.length > 0) {
       const { data: signed } = await supabase.storage
         .from("receipts")
         .createSignedUrls(
           rows.map((r) => r.file_path),
-          3600
+          60 * 60 * 8
         );
-      signed?.forEach((s, idx) => {
-        if (s.signedUrl) rows[idx].url = s.signedUrl;
+      const byPath = new Map(
+        (signed ?? [])
+          .filter((s) => s.path && s.signedUrl)
+          .map((s) => [s.path as string, s.signedUrl as string])
+      );
+      rows.forEach((r) => {
+        r.url = byPath.get(r.file_path);
       });
     }
     setReceipts(rows);
@@ -185,20 +195,21 @@ export default function ReceiptsPage() {
                 key={r.id}
                 className="border border-line rounded-xl overflow-hidden bg-paper group relative"
               >
-                {r.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <a href={r.url} target="_blank" rel="noreferrer">
-                    <img
-                      src={r.url}
-                      alt={r.note ?? "Receipt"}
-                      className="w-full h-36 object-cover"
-                    />
-                  </a>
-                ) : (
-                  <div className="w-full h-36 flex items-center justify-center text-ink-soft text-xs">
-                    File unavailable
-                  </div>
-                )}
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    if (!r.url) e.preventDefault();
+                  }}
+                >
+                  <ReceiptImage
+                    path={r.file_path}
+                    signedUrl={r.url}
+                    alt={r.note ?? "Receipt"}
+                    className="w-full h-36 object-cover"
+                  />
+                </a>
                 <figcaption className="p-2 text-xs">
                   <div className="font-medium truncate">
                     {r.note || "Receipt"}
