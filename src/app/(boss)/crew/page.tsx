@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button, Card, Empty, Td, Th } from "@/components/ui";
 import PinPad from "@/components/PinPad";
-import { fmtClock, fmtDate, fmtDuration, fmtTime, hoursBetween, mondayOf, todayISO } from "@/lib/format";
+import { fmtClock, fmtDate, fmtDuration, fmtTime, hoursBetween, weekStartOf, todayISO } from "@/lib/format";
 import type { CrewShift, Profile, TimeClockEntry } from "@/lib/types";
 
 export default function CrewPage() {
@@ -19,7 +19,7 @@ export default function CrewPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const weekStart = mondayOf(todayISO());
+    const weekStart = weekStartOf(todayISO());
     const [e, c, w, s, ps] = await Promise.all([
       supabase.from("profiles").select("*").order("full_name"),
       supabase.from("time_clock_entries").select("*").is("clock_out", null),

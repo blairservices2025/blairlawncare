@@ -15,10 +15,10 @@ import {
 } from "@/components/ui";
 import BillJobsPanel from "@/components/BillJobsPanel";
 import { useLiveRefresh } from "@/lib/useLiveRefresh";
-import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
+import { addDays, fmtClock, fmtDate, weekStartOf, todayISO } from "@/lib/format";
 import type { Profile, ScheduledJob } from "@/lib/types";
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const STATUS_TONE: Record<string, "good" | "warn" | "neutral" | "serious"> = {
   done: "good",
@@ -37,7 +37,7 @@ const STATUS_EDGE: Record<string, string> = {
 
 export default function JobsPage() {
   const supabase = createClient();
-  const [weekStart, setWeekStart] = useState(mondayOf(todayISO()));
+  const [weekStart, setWeekStart] = useState(weekStartOf(todayISO()));
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [crewFilter, setCrewFilter] = useState("");
@@ -103,7 +103,7 @@ export default function JobsPage() {
           <Button variant="secondary" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             ← Prev
           </Button>
-          <Button variant="secondary" onClick={() => setWeekStart(mondayOf(todayISO()))}>
+          <Button variant="secondary" onClick={() => setWeekStart(weekStartOf(todayISO()))}>
             This week
           </Button>
           <Button variant="secondary" onClick={() => setWeekStart(addDays(weekStart, 7))}>

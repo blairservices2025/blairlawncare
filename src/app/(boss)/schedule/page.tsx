@@ -14,7 +14,7 @@ import {
 } from "@/components/ui";
 import { useDragDrop } from "@/lib/useDragDrop";
 import { useLiveRefresh } from "@/lib/useLiveRefresh";
-import { addDays, fmtClock, fmtDate, mondayOf, todayISO } from "@/lib/format";
+import { addDays, fmtClock, fmtDate, weekStartOf, todayISO } from "@/lib/format";
 import type {
   CrewShift,
   Customer,
@@ -34,7 +34,7 @@ const CREW_COLORS = [
 ];
 const colorFor = (i: number) => CREW_COLORS[i % CREW_COLORS.length];
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type DragPayload =
   | { kind: "yard"; id: string }
@@ -76,7 +76,7 @@ function chipLabels(
 
 export default function SchedulePage() {
   const supabase = createClient();
-  const [weekStart, setWeekStart] = useState(mondayOf(todayISO()));
+  const [weekStart, setWeekStart] = useState(weekStartOf(todayISO()));
   const [shifts, setShifts] = useState<CrewShift[]>([]);
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [lastWeekJobs, setLastWeekJobs] = useState<ScheduledJob[]>([]);
@@ -281,7 +281,7 @@ export default function SchedulePage() {
           <Button variant="secondary" onClick={() => setWeekStart(addDays(weekStart, -7))}>
             ← Prev
           </Button>
-          <Button variant="secondary" onClick={() => setWeekStart(mondayOf(todayISO()))}>
+          <Button variant="secondary" onClick={() => setWeekStart(weekStartOf(todayISO()))}>
             This week
           </Button>
           <Button variant="secondary" onClick={() => setWeekStart(addDays(weekStart, 7))}>

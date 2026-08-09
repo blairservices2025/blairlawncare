@@ -45,13 +45,29 @@ export const addDays = (iso: string, days: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-/** Monday of the week containing the given ISO date. */
-export const mondayOf = (iso: string) => {
+/**
+ * The Sunday that starts the week containing the given ISO date.
+ *
+ * The working week here runs Sunday to Saturday, so a new board comes up on
+ * Sunday morning rather than the crew spending that day looking at the week
+ * they have just finished.
+ */
+export const weekStartOf = (iso: string) => {
   const d = new Date(iso + "T00:00:00");
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addDays(iso, diff);
+  return addDays(iso, -d.getDay());
 };
+
+/**
+ * The oldest a to-do can be and still appear on a list.
+ *
+ * A week is long enough to be useful; past that the list becomes a scroll of
+ * things nobody is going to do, and the ones that matter get lost in it.
+ *
+ * Nothing is deleted — an old to-do is only hidden, so it still comes out in
+ * the spreadsheet export on the Settings page. Cut to the day rather than to
+ * the hour so the list doesn't quietly change while someone is reading it.
+ */
+export const todoCutoff = () => addDays(todayISO(), -7);
 
 export const dayLabel = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("en-US", {

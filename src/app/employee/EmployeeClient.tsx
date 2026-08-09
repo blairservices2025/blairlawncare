@@ -25,8 +25,9 @@ import {
   fmtDuration,
   fmtTime,
   hoursBetween,
-  mondayOf,
+  weekStartOf,
   todayISO,
+  todoCutoff,
 } from "@/lib/format";
 import type {
   CrewShift,
@@ -90,7 +91,7 @@ export default function EmployeeClient() {
       asId && (signedIn as Profile | null)?.role === "boss" ? asId : user.id;
     setViewingId(viewId);
 
-    const weekStart = mondayOf(todayISO());
+    const weekStart = weekStartOf(todayISO());
     const weekEnd = addDays(weekStart, 6);
     const [p, oc, ot, rt, sh, jb, td, to, yl] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", viewId).single(),
@@ -132,6 +133,7 @@ export default function EmployeeClient() {
       supabase
         .from("todos")
         .select("*")
+        .gte("created_at", todoCutoff())
         .order("created_at", { ascending: false })
         .limit(15),
       supabase
@@ -185,6 +187,7 @@ export default function EmployeeClient() {
     const { data } = await supabase
       .from("todos")
       .select("*")
+      .gte("created_at", todoCutoff())
       .order("created_at", { ascending: false })
       .limit(15);
     setTodos((data as Todo[]) ?? []);

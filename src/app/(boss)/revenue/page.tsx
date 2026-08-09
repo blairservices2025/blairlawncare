@@ -7,7 +7,7 @@ import {
   daysOverdue,
   fmtDuration,
   hoursBetween,
-  mondayOf,
+  weekStartOf,
   todayISO,
   usd,
 } from "@/lib/format";
@@ -38,7 +38,7 @@ export default function RevenuePage() {
   if (loading) return <p className="text-ink-soft text-sm">Loading…</p>;
 
   const today = todayISO();
-  const weekStart = mondayOf(today);
+  const weekStart = weekStartOf(today);
   const monthKey = today.slice(0, 7);
 
   const paid = invoices.filter((i) => i.status === "paid");

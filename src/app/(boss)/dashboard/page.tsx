@@ -18,6 +18,7 @@ import {
   fmtDate,
   fmtTime,
   todayISO,
+  todoCutoff,
   usd,
   daysOverdue,
 } from "@/lib/format";
@@ -61,6 +62,7 @@ export default function OverviewPage() {
       supabase
         .from("todos")
         .select("*, profiles(full_name)")
+        .gte("created_at", todoCutoff())
         .order("created_at", { ascending: false })
         .limit(20),
       supabase.from("profiles").select("*").eq("is_active", true).order("full_name"),
@@ -99,6 +101,7 @@ export default function OverviewPage() {
     const { data } = await supabase
       .from("todos")
       .select("*, profiles(full_name)")
+      .gte("created_at", todoCutoff())
       .order("created_at", { ascending: false })
       .limit(20);
     setTodos((data as Todo[]) ?? []);
