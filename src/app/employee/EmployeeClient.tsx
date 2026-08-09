@@ -207,6 +207,34 @@ export default function EmployeeClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The next six days of shifts and mows. Same window the first load uses,
+  // recomputed here so it still starts from today if the page has been open
+  // since yesterday.
+  const refreshSchedule = useCallback(async () => {
+    if (!viewingId) return;
+    const from = todayISO();
+    const to = addDays(from, 6);
+    const [sh, jb] = await Promise.all([
+      supabase
+        .from("crew_shifts")
+        .select("*")
+        .eq("employee_id", viewingId)
+        .gte("shift_date", from)
+        .lte("shift_date", to)
+        .order("shift_date"),
+      supabase
+        .from("scheduled_jobs")
+        .select("*, customers(name, address, plan)")
+        .eq("employee_id", viewingId)
+        .gte("job_date", from)
+        .lte("job_date", to)
+        .order("job_date"),
+    ]);
+    setShifts((sh.data as CrewShift[]) ?? []);
+    setJobs((jb.data as ScheduledJob[]) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewingId]);
+
   const refreshTimeOff = useCallback(async () => {
     if (!viewingId) return;
     const { data } = await supabase
@@ -221,9 +249,18 @@ export default function EmployeeClient() {
 
   // Anything the boss sends through — a new to-do, a yard ticked off by
   // someone else, a time-off request answered — lands here on its own.
+  //
+  // A change to scheduled_jobs feeds two lists: today's route, and the next
+  // six days. Only the route was being refreshed, so a mow the boss added
+  // for tomorrow sat unseen until the page was opened again. Shifts weren't
+  // watched at all, which meant new hours never arrived either.
   useLiveRefresh("crew-live", {
     todos: refreshTodos,
-    scheduled_jobs: refreshBoard,
+    scheduled_jobs: () => {
+      refreshBoard();
+      refreshSchedule();
+    },
+    crew_shifts: refreshSchedule,
     time_off_requests: refreshTimeOff,
   });
 
