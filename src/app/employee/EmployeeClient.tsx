@@ -25,7 +25,6 @@ import {
   fmtDuration,
   fmtTime,
   hoursBetween,
-  weekStartOf,
   todayISO,
   todoCutoff,
 } from "@/lib/format";
@@ -91,7 +90,11 @@ export default function EmployeeClient() {
       asId && (signedIn as Profile | null)?.role === "boss" ? asId : user.id;
     setViewingId(viewId);
 
-    const weekStart = weekStartOf(todayISO());
+    // A rolling window starting today, not the calendar week. Someone
+    // looking at this on a Saturday wants to know about the days ahead of
+    // them, not the five that have already gone — and on a fixed week
+    // they'd have seen almost nothing.
+    const weekStart = todayISO();
     const weekEnd = addDays(weekStart, 6);
     const [p, oc, ot, rt, sh, jb, td, to, yl] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", viewId).single(),
@@ -474,9 +477,9 @@ export default function EmployeeClient() {
         </Card>
 
         {/* My schedule */}
-        <Card title="My schedule this week">
+        <Card title={`My schedule · through ${dayLabel(addDays(todayISO(), 6))}`}>
           {shifts.length === 0 && jobs.length === 0 ? (
-            <Empty>Nothing scheduled this week.</Empty>
+            <Empty>Nothing scheduled in the next 7 days.</Empty>
           ) : (
             <ul className="divide-y divide-line">
               {shifts.map((s) => (
