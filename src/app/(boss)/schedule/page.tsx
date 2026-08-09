@@ -50,30 +50,28 @@ interface Defaults {
 }
 
 /**
- * What a chip on the board should say: the yard, then its address and whose
- * it is in small print underneath.
+ * What a chip on the board should say: the address, with the owner's name in
+ * small print underneath.
  *
- * One client can have several yards, so the yard leads — it's the thing
- * being mowed — matching the order the Yards page uses. Until now the owner
- * was only in a hover tooltip and the address wasn't shown at all, which is
- * no use on a phone or an iPad.
+ * The address leads because that's what you drive to. Most yards are named
+ * after their address anyway — a yard created alongside its customer takes
+ * the address as its name — but the ones that aren't ("Yard 2", "Back lot")
+ * were showing a label you can't navigate to. Falling back through the yard's
+ * own name and then the client's keeps a chip on the board even when there's
+ * no address on file.
  *
- * Both small lines are dropped when they'd only repeat the title. That is
- * the normal case, not an edge one: a yard created alongside its customer is
- * named after the address when there is one, and "<owner>'s yard" when there
- * isn't. A job booked before yards existed has no yard to name, so the
- * client leads instead and there's nothing left to put below.
+ * The owner is dropped when it would only repeat the title, which happens
+ * for a yard named "<owner>'s yard" — what a yard with no address gets
+ * called. Until now the owner was in a hover tooltip, which a phone or an
+ * iPad never shows.
  */
 function chipLabels(
   yardName: string | null | undefined,
   address: string | null | undefined,
   clientName: string | null | undefined
 ) {
-  const title = yardName || clientName || "Job";
-  const lines = [address, clientName].filter(
-    (line): line is string => !!line && line !== title
-  );
-  return { title, lines };
+  const title = address || yardName || clientName || "Job";
+  return { title, sub: clientName && clientName !== title ? clientName : null };
 }
 
 export default function SchedulePage() {
@@ -325,7 +323,7 @@ export default function SchedulePage() {
                 : state === "due"
                   ? "bg-gold text-pine"
                   : "bg-bone-dim text-pine";
-            const { title, lines } = chipLabels(
+            const { title, sub } = chipLabels(
               c.name,
               c.address,
               c.customers?.name
@@ -348,14 +346,11 @@ export default function SchedulePage() {
                 <span className="block text-[12.5px] font-semibold">{title}</span>
                 {/* Dimmed rather than recoloured, so it reads on all three
                     chip backgrounds without a variant for each. */}
-                {lines.map((line) => (
-                  <span
-                    key={line}
-                    className="block text-[10px] font-medium opacity-70"
-                  >
-                    {line}
+                {sub && (
+                  <span className="block text-[10px] font-medium opacity-70">
+                    {sub}
                   </span>
-                ))}
+                )}
               </button>
             );
           })}
@@ -395,7 +390,7 @@ export default function SchedulePage() {
                 )}
 
                 {dayJobs.map((j) => {
-                  const { title, lines } = chipLabels(
+                  const { title, sub } = chipLabels(
                     j.yards?.name,
                     j.yards?.address ?? j.customers?.address,
                     j.customers?.name
@@ -428,14 +423,11 @@ export default function SchedulePage() {
                     <div className="font-semibold text-[11.5px] pr-3 leading-tight">
                       {title}
                     </div>
-                    {lines.map((line) => (
-                      <div
-                        key={line}
-                        className="text-[10px] text-ink-soft leading-tight"
-                      >
-                        {line}
+                    {sub && (
+                      <div className="text-[10px] text-ink-soft leading-tight">
+                        {sub}
                       </div>
-                    ))}
+                    )}
                     <div className="text-ink-soft mt-0.5">
                       {j.service ?? "Mow"}
                       {j.profiles?.full_name ? ` · ${j.profiles.full_name}` : ""}
@@ -445,7 +437,7 @@ export default function SchedulePage() {
                 })}
 
                 {ghostsFor(di).map((g) => {
-                  const { title, lines } = chipLabels(
+                  const { title, sub } = chipLabels(
                     g.yards?.name,
                     g.yards?.address ?? g.customers?.address,
                     g.customers?.name
@@ -463,14 +455,11 @@ export default function SchedulePage() {
                       <div className="font-semibold text-[11.5px] text-ink-soft leading-tight">
                         {title}
                       </div>
-                      {lines.map((line) => (
-                        <div
-                          key={line}
-                          className="text-[10px] text-ink-soft leading-tight"
-                        >
-                          {line}
+                      {sub && (
+                        <div className="text-[10px] text-ink-soft leading-tight">
+                          {sub}
                         </div>
-                      ))}
+                      )}
                       <div className="text-ink-soft mt-0.5">
                         {g.service ?? "Mow"} · tap to repeat
                       </div>
@@ -924,8 +913,14 @@ function EditJobModal({
     <Modal
       open={!!job}
       onClose={onClose}
-      // Titled by the yard, so it matches the chip that was tapped to get here.
-      title={chipLabels(job?.yards?.name, null, job?.customers?.name).title}
+      // Titled the same way as the chip that was tapped to get here.
+      title={
+        chipLabels(
+          job?.yards?.name,
+          job?.yards?.address ?? job?.customers?.address,
+          job?.customers?.name
+        ).title
+      }
     >
       <div className="space-y-3">
         <div>
